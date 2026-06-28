@@ -37,7 +37,10 @@
 
       <div #bookContainer class="book-container {{writingStyle() | writingStyleClass}}"
             [ngClass]="{'immersive' : immersiveMode()}"
+            style="position: relative;"
             (mousedown)="mouseDown($event)" >
+
+        <app-drawing-overlay [chapterId]="chapterId" [pageNumber]="pageNum()" />
 
         <div #readingHtml class="book-content {{layoutMode() | columnLayoutClass}} {{writingStyle() | writingStyleClass}}"
              [ngStyle]="{'max-height': columnHeight(), 'max-width': verticalBookContentWidth(), 'width': verticalBookContentWidth(), 'column-width': columnWidth(), 'padding-bottom': bookContentPaddingBottom()}"

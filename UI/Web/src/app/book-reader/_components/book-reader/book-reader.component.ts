@@ -72,6 +72,7 @@ import {KeyBindTarget} from "../../../_models/preferences/preferences";
 import {BreakpointService} from "../../../_services/breakpoint.service";
 import {KavitaTitleStrategy} from "../../../_services/kavita-title.strategy";
 import {EntityTitleService} from "../../../_services/entity-title.service";
+import {DrawingOverlayComponent} from "../drawing-overlay/drawing-overlay.component";
 
 
 interface HistoryPoint {
@@ -134,7 +135,8 @@ const KEYBIND_TARGETS = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgTemplateOutlet, NgStyle, NgClass, NgbTooltip,
     BookLineOverlayComponent, TranslocoDirective, ColumnLayoutClassPipe,
-    WritingStyleClassPipe, ReadTimeLeftPipe, PercentPipe, NgxSliderModule],
+    WritingStyleClassPipe, ReadTimeLeftPipe, PercentPipe, NgxSliderModule,
+    DrawingOverlayComponent],
   providers: [EpubReaderSettingsService, LayoutMeasurementService],
 })
 export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
