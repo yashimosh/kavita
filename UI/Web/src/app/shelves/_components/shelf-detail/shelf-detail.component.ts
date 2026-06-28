@@ -37,13 +37,6 @@ export class ShelfDetailComponent implements OnInit {
   editingTitle = false;
   editTitle = '';
 
-  dragOver = false;
-  uploadFile: File | null = null;
-  uploadTitle = '';
-  showUploadModal = false;
-  isUploading = signal(false);
-  uploadMessage = signal('');
-
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('shelfId'));
     this.loadShelf(id);
@@ -87,57 +80,6 @@ export class ShelfDetailComponent implements OnInit {
       this.shelf.update(sh => sh ? {...sh, title: this.editTitle.trim()} : sh);
       this.editingTitle = false;
     });
-  }
-
-  onDragOver(event: DragEvent) { event.preventDefault(); this.dragOver = true; }
-  onDragLeave() { this.dragOver = false; }
-
-  onDrop(event: DragEvent) {
-    event.preventDefault();
-    this.dragOver = false;
-    const file = event.dataTransfer?.files?.[0];
-    if (file) this.prepareUpload(file);
-  }
-
-  onFileSelected(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) this.prepareUpload(file);
-  }
-
-  prepareUpload(file: File) {
-    this.uploadFile = file;
-    this.uploadTitle = file.name.replace(/\.(epub|pdf|cbz|cbr)$/i, '');
-    this.showUploadModal = true;
-  }
-
-  confirmUpload() {
-    if (!this.uploadFile) return;
-    this.isUploading.set(true);
-    this.shelfService.uploadBook(this.uploadFile, this.uploadTitle).subscribe({
-      next: res => {
-        this.uploadMessage.set(res.message);
-        this.isUploading.set(false);
-        setTimeout(() => {
-          this.showUploadModal = false;
-          this.uploadFile = null;
-          this.uploadTitle = '';
-          this.uploadMessage.set('');
-          const id = this.shelf()?.id;
-          if (id) this.loadShelf(id);
-        }, 2000);
-      },
-      error: () => {
-        this.uploadMessage.set('Upload failed.');
-        this.isUploading.set(false);
-      }
-    });
-  }
-
-  cancelUpload() {
-    this.showUploadModal = false;
-    this.uploadFile = null;
-    this.uploadTitle = '';
-    this.uploadMessage.set('');
   }
 
   addFromLibrary() {
