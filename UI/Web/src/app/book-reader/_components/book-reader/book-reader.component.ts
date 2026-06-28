@@ -625,15 +625,15 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       const pageNum = this.pageNum();
 
       if (annotationEvent == null || annotationEvent.pageNumber !== pageNum) return;
-      if (this.firstLoad) return;
+      if (annotationEvent.type === 'edit') return;
 
-      if (annotationEvent.type === 'edit') return; // Let signalR propagate state (or component can)
+      if (this.firstLoad && annotationEvent.type !== 'create') return;
 
       this.firstLoad = true;
       const scrollProgress = this.reader().nativeElement?.scrollTop || this.scrollService.scrollPosition;
 
       if (scrollProgress > 0) {
-        this.loadPage(undefined, scrollProgress); // This will force loading exactly on the scroll
+        this.loadPage(undefined, scrollProgress);
       } else {
         this.loadPage(this.lastSeenScrollPartPath);
       }

@@ -29,14 +29,17 @@ export class DrawingOverlayComponent implements AfterViewInit, OnChanges, OnDest
   private readonly cdRef = inject(ChangeDetectorRef);
   tool: Tool = 'pen';
   color = '#1a73e8';
+  toolSize = 4;
   readonly colors = ['#1a73e8', '#e8390f', '#0f9e3e', '#f5a623', '#9b59b6', '#000000'];
   strokeHistory: Stroke[] = [];
 
   private ctx!: CanvasRenderingContext2D;
   private isDown = false;
   private currentStroke: DrawPoint[] = [];
-  private currentLineWidth = 2;
   private resizeObserver?: ResizeObserver;
+  private penSize = 4;
+  private highlighterSize = 20;
+  private eraserSize = 24;
 
   // ── lifecycle ──────────────────────────────────────────────────────────────
 
@@ -119,15 +122,15 @@ export class DrawingOverlayComponent implements AfterViewInit, OnChanges, OnDest
     let color: string;
 
     if (tool === 'pen') {
-      lineWidth = Math.log(pressure + 1) * 18;
+      lineWidth = this.penSize * (0.5 + Math.log(pressure + 1) * 0.8);
       opacity = 1;
       color = this.color;
     } else if (tool === 'highlighter') {
-      lineWidth = 20;
+      lineWidth = this.highlighterSize;
       opacity = 0.35;
       color = this.color;
     } else {
-      lineWidth = 24;
+      lineWidth = this.eraserSize;
       opacity = 1;
       color = '#eraser';
     }
@@ -269,7 +272,17 @@ export class DrawingOverlayComponent implements AfterViewInit, OnChanges, OnDest
 
   setTool(t: Tool) {
     this.tool = t;
+    if (t === 'pen') this.toolSize = this.penSize;
+    else if (t === 'highlighter') this.toolSize = this.highlighterSize;
+    else this.toolSize = this.eraserSize;
     this.cdRef.markForCheck();
+  }
+
+  onSizeChange() {
+    const size = this.toolSize;
+    if (this.tool === 'pen') this.penSize = size;
+    else if (this.tool === 'highlighter') this.highlighterSize = size;
+    else this.eraserSize = size;
   }
 
   undo() {

@@ -5,7 +5,7 @@
 
   <!-- Toolbar — only when draw mode is on -->
   @if (drawMode) {
-    <div class="draw-toolbar">
+    <div class="draw-toolbar" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
 
       <!-- Tools -->
       <button class="tool-btn" [class.active]="tool === 'pen'" (click)="setTool('pen')" title="Pen">
@@ -25,6 +25,17 @@
           <path d="M20 20H7L3 16l11-11 7 7-3 3"/><path d="M6 17l2-2"/>
         </svg>
       </button>
+
+      <div class="divider"></div>
+
+      <!-- Size slider -->
+      <div class="size-control">
+        <div class="size-preview" [style.width.px]="toolSize" [style.height.px]="toolSize"
+             [style.background]="tool === 'eraser' ? 'rgba(255,255,255,0.5)' : color"
+             [style.opacity]="tool === 'highlighter' ? 0.35 : 1"></div>
+        <input type="range" class="size-slider" [min]="1" [max]="40"
+               [(ngModel)]="toolSize" (input)="onSizeChange()" title="Size" />
+      </div>
 
       <div class="divider"></div>
 
