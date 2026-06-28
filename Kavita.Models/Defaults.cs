@@ -420,6 +420,14 @@ public static class Defaults
         Order = 6,
         IsProvided = true,
         Visible = true
+    },
+    new()
+    {
+        Name = "shelves",
+        StreamType = SideNavStreamType.Shelves,
+        Order = 7,
+        IsProvided = true,
+        Visible = true
     }
     ];
 

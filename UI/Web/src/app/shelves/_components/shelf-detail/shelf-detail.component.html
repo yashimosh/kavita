@@ -1,0 +1,88 @@
+<div class="main-container container-fluid">
+  <app-side-nav-companion-bar [hasFilter]="false">
+    <div title class="d-flex align-items-center gap-2">
+      <button class="btn btn-sm btn-outline-secondary" (click)="goBack()">
+        <i class="fa fa-arrow-left"></i>
+      </button>
+      @if (!editingTitle) {
+        <h4 class="mb-0" style="cursor:pointer" (click)="startEditTitle()" title="Click to rename">
+          {{ shelf()?.title }}
+          <i class="fa fa-pencil ms-1 text-muted" style="font-size:0.7em"></i>
+        </h4>
+      } @else {
+        <div class="d-flex gap-2">
+          <input class="form-control form-control-sm" [(ngModel)]="editTitle" (keyup.enter)="saveTitle()" autofocus />
+          <button class="btn btn-primary btn-sm" (click)="saveTitle()">Save</button>
+          <button class="btn btn-outline-secondary btn-sm" (click)="editingTitle = false">Cancel</button>
+        </div>
+      }
+    </div>
+    <h5 subtitle>{{ series().length }} book{{ series().length !== 1 ? 's' : '' }}</h5>
+  </app-side-nav-companion-bar>
+
+  <!-- Upload drop zone -->
+  <div class="upload-zone"
+       [class.drag-over]="dragOver"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave()"
+       (drop)="onDrop($event)"
+       (click)="fileInput.click()">
+    <i class="fa fa-cloud-upload-alt"></i>
+    <span>Drop a book here to upload (EPUB, PDF)</span>
+    <input #fileInput type="file" accept=".epub,.pdf,.cbz,.cbr" style="display:none" (change)="onFileSelected($event)" />
+  </div>
+
+  @if (isLoading()) {
+    <div class="text-center py-5"><i class="fa fa-spinner fa-spin fa-2x"></i></div>
+  }
+
+  @if (!isLoading() && series().length === 0) {
+    <div class="empty-state text-center py-5">
+      <i class="fa fa-book-open fa-3x mb-3 text-muted"></i>
+      <p class="text-muted">This shelf is empty. Upload a book or add series from your library.</p>
+    </div>
+  }
+
+  <div class="series-grid">
+    @for (s of series(); track s.id) {
+      <div class="series-card" (click)="openSeries(s)">
+        <div class="series-cover">
+          @if (s.coverImage) {
+            <img [src]="imageService.getSeriesCoverImage(s.id)" [alt]="s.name" />
+          } @else {
+            <div class="series-cover-placeholder">
+              <i class="fa fa-book"></i>
+            </div>
+          }
+        </div>
+        <div class="series-info">
+          <div class="series-title">{{ s.name }}</div>
+        </div>
+        <button class="btn btn-sm btn-outline-danger series-remove"
+                (click)="removeFromShelf($event, s)"
+                title="Remove from shelf">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (showUploadModal) {
+    <div class="modal-backdrop" (click)="cancelUpload()"></div>
+    <div class="upload-modal">
+      <h5>Upload Book to Shelf</h5>
+      <p class="text-muted mb-2">File: <strong>{{ uploadFile?.name }}</strong></p>
+      <label class="form-label">Book title</label>
+      <input class="form-control mb-3" [(ngModel)]="uploadTitle" placeholder="Title shown in library" />
+      @if (uploadMessage()) {
+        <div class="alert alert-info">{{ uploadMessage() }}</div>
+      }
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" (click)="confirmUpload()" [disabled]="isUploading()">
+          @if (isUploading()) { <i class="fa fa-spinner fa-spin me-1"></i> } Upload
+        </button>
+        <button class="btn btn-outline-secondary" (click)="cancelUpload()" [disabled]="isUploading()">Cancel</button>
+      </div>
+    </div>
+  }
+</div>

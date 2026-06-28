@@ -1,0 +1,92 @@
+<div class="main-container container-fluid">
+  <app-side-nav-companion-bar [hasFilter]="false">
+    <h4 title>Shelves</h4>
+    <h5 subtitle>{{ shelves().length }} shelf{{ shelves().length !== 1 ? 'ves' : '' }}</h5>
+  </app-side-nav-companion-bar>
+
+  <!-- Upload drop zone -->
+  <div class="upload-zone"
+       [class.drag-over]="dragOver"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave()"
+       (drop)="onDrop($event)"
+       (click)="fileInput.click()">
+    <i class="fa fa-cloud-upload-alt"></i>
+    <span>Drop a book here to upload (EPUB, PDF)</span>
+    <input #fileInput type="file" accept=".epub,.pdf,.cbz,.cbr" style="display:none" (change)="onFileSelected($event)" />
+  </div>
+
+  <!-- Create shelf button -->
+  <div class="shelf-actions">
+    @if (!showCreateForm) {
+      <button class="btn btn-primary btn-sm" (click)="showCreateForm = true">
+        <i class="fa fa-plus me-1"></i>New Shelf
+      </button>
+    } @else {
+      <div class="create-form d-flex gap-2 align-items-center">
+        <input class="form-control form-control-sm" [(ngModel)]="newShelfTitle"
+               placeholder="Shelf name" (keyup.enter)="createShelf()" autofocus />
+        <button class="btn btn-primary btn-sm" (click)="createShelf()">Create</button>
+        <button class="btn btn-outline-secondary btn-sm" (click)="showCreateForm = false; newShelfTitle = ''">Cancel</button>
+      </div>
+    }
+  </div>
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="text-center py-5"><i class="fa fa-spinner fa-spin fa-2x"></i></div>
+  }
+
+  <!-- Shelf grid -->
+  @if (!isLoading() && shelves().length === 0) {
+    <div class="empty-state text-center py-5">
+      <i class="fa fa-layer-group fa-3x mb-3 text-muted"></i>
+      <p class="text-muted">No shelves yet. Create one to organize your books.</p>
+    </div>
+  }
+
+  <div class="shelves-grid">
+    @for (shelf of shelves(); track shelf.id) {
+      <div class="shelf-card" (click)="openShelf(shelf)">
+        <div class="shelf-cover">
+          @if (shelf.coverImage) {
+            <img [src]="imageService.getCollectionCoverImage(shelf.id)" [alt]="shelf.title" />
+          } @else {
+            <div class="shelf-cover-placeholder">
+              <i class="fa fa-layer-group"></i>
+            </div>
+          }
+        </div>
+        <div class="shelf-info">
+          <div class="shelf-title">{{ shelf.title }}</div>
+          <div class="shelf-count text-muted">{{ shelf.itemCount }} book{{ shelf.itemCount !== 1 ? 's' : '' }}</div>
+        </div>
+        <button class="btn btn-sm btn-outline-danger shelf-delete"
+                (click)="deleteShelf($event, shelf)"
+                title="Delete shelf">
+          <i class="fa fa-trash"></i>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Upload modal -->
+  @if (showUploadModal) {
+    <div class="modal-backdrop" (click)="cancelUpload()"></div>
+    <div class="upload-modal">
+      <h5>Upload Book</h5>
+      <p class="text-muted mb-2">File: <strong>{{ uploadFile?.name }}</strong></p>
+      <label class="form-label">Series / Book title</label>
+      <input class="form-control mb-3" [(ngModel)]="uploadTitle" placeholder="Title shown in library" />
+      @if (uploadMessage()) {
+        <div class="alert alert-info">{{ uploadMessage() }}</div>
+      }
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" (click)="confirmUpload()" [disabled]="isUploading()">
+          @if (isUploading()) { <i class="fa fa-spinner fa-spin me-1"></i> } Upload
+        </button>
+        <button class="btn btn-outline-secondary" (click)="cancelUpload()" [disabled]="isUploading()">Cancel</button>
+      </div>
+    </div>
+  }
+</div>

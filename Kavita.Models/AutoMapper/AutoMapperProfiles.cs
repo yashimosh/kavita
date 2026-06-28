@@ -8,6 +8,7 @@ using Kavita.Models.DTOs;
 using Kavita.Models.DTOs.Account;
 using Kavita.Models.DTOs.Annotations;
 using Kavita.Models.DTOs.Collection;
+using Kavita.Models.DTOs.Shelves;
 using Kavita.Models.DTOs.Dashboard;
 using Kavita.Models.DTOs.Device.EmailDevice;
 using Kavita.Models.DTOs.Email;
@@ -58,6 +59,9 @@ public class AutoMapperProfiles : Profile
         CreateMap<MangaFile, MangaFileDto>();
         CreateMap<Series, SeriesDto>();
         CreateMap<AppUserCollection, AppUserCollectionDto>()
+            .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.AppUser.UserName))
+            .ForMember(dest => dest.ItemCount, opt => opt.MapFrom(src => src.Items.Count));
+        CreateMap<AppUserShelf, AppUserShelfDto>()
             .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.AppUser.UserName))
             .ForMember(dest => dest.ItemCount, opt => opt.MapFrom(src => src.Items.Count));
         CreateMap<Person, PersonDto>()

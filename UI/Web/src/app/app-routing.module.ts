@@ -29,6 +29,10 @@ export const routes: Routes = [
         loadChildren: () => import('./_routes/collections-routing.module').then(m => m.routes)
       },
       {
+        path: 'shelves',
+        loadChildren: () => import('./_routes/shelves-routing.module').then(m => m.routes)
+      },
+      {
         path: 'announcements',
         loadChildren: () => import('./_routes/announcements-routing.module').then(m => m.routes)
       },

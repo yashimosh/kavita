@@ -42,6 +42,10 @@ public class AppUser : IdentityUser<int>, IHasConcurrencyToken, IHasCoverImage
     /// </summary>
     public ICollection<AppUserCollection> Collections { get; set; } = null!;
     /// <summary>
+    /// Shelves associated with this user
+    /// </summary>
+    public ICollection<AppUserShelf> Shelves { get; set; } = null!;
+    /// <summary>
     /// A list of Series the user want's to read
     /// </summary>
     public ICollection<AppUserWantToRead> WantToRead { get; set; } = null!;

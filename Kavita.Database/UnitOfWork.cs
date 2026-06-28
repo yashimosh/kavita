@@ -28,6 +28,7 @@ public class UnitOfWork : IUnitOfWork
         SettingsRepository = new SettingsRepository(_context, mapper);
         AppUserProgressRepository = new AppUserProgressRepository(_context, mapper);
         CollectionTagRepository = new CollectionTagRepository(_context, mapper);
+        ShelfRepository = new ShelfRepository(_context, mapper);
         ChapterRepository = new ChapterRepository(_context, mapper);
         ReadingListRepository = new ReadingListRepository(_context, mapper);
         SeriesMetadataRepository = new SeriesMetadataRepository(_context);
@@ -64,6 +65,7 @@ public class UnitOfWork : IUnitOfWork
     public ISettingsRepository SettingsRepository { get; }
     public IAppUserProgressRepository AppUserProgressRepository { get; }
     public ICollectionTagRepository CollectionTagRepository { get; }
+    public IShelfRepository ShelfRepository { get; }
     public IChapterRepository ChapterRepository { get; }
     public IReadingListRepository ReadingListRepository { get; }
     public ISeriesMetadataRepository SeriesMetadataRepository { get; }

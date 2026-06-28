@@ -74,6 +74,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<ILibraryWatcher, LibraryWatcher>();
         services.AddScoped<ITachiyomiService, TachiyomiService>();
         services.AddScoped<ICollectionTagService, CollectionTagService>();
+        services.AddScoped<IShelfService, ShelfService>();
 
         services.AddScoped<IFileSystem, FileSystem>();
         services.AddScoped<IDirectoryService, DirectoryService>();

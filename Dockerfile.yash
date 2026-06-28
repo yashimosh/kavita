@@ -1,0 +1,64 @@
+# Build Angular frontend
+FROM node:22-alpine AS ui-build
+WORKDIR /src/UI/Web
+COPY UI/Web/package*.json ./
+RUN npm ci --prefer-offline
+COPY UI/Web/ ./
+RUN npm run build -- --configuration production
+
+# Build .NET backend
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS api-build
+WORKDIR /src
+COPY *.sln global.json ./
+COPY Kavita.Common/Kavita.Common.csproj Kavita.Common/
+COPY Kavita.Common.Tests/Kavita.Common.Tests.csproj Kavita.Common.Tests/
+COPY Kavita.Models/Kavita.Models.csproj Kavita.Models/
+COPY Kavita.Models.Tests/Kavita.Models.Tests.csproj Kavita.Models.Tests/
+COPY Kavita.API/Kavita.API.csproj Kavita.API/
+COPY Kavita.Database/Kavita.Database.csproj Kavita.Database/
+COPY Kavita.Database.Tests/Kavita.Database.Tests.csproj Kavita.Database.Tests/
+COPY Kavita.Services/Kavita.Services.csproj Kavita.Services/
+COPY Kavita.Services.Tests/Kavita.Services.Tests.csproj Kavita.Services.Tests/
+COPY Kavita.Server/Kavita.Server.csproj Kavita.Server/
+COPY Kavita.Server.Tests/Kavita.Server.Tests.csproj Kavita.Server.Tests/
+COPY Kavita.Email/Kavita.Email.csproj Kavita.Email/
+COPY Kavita.Benchmark/Kavita.Benchmark.csproj Kavita.Benchmark/
+COPY Kavita.Integration.Tests/Kavita.Integration.Tests.csproj Kavita.Integration.Tests/
+RUN dotnet restore Kavita.Server/Kavita.Server.csproj
+
+COPY . .
+RUN dotnet publish Kavita.Server/Kavita.Server.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    -p:UseAppHost=false
+
+# Final runtime image
+FROM ubuntu:noble
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+  && apt-get install -y libicu-dev libgdiplus curl tzdata \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy .NET runtime (from SDK image)
+COPY --from=mcr.microsoft.com/dotnet/aspnet:10.0 /usr/share/dotnet /usr/share/dotnet
+ENV PATH="$PATH:/usr/share/dotnet"
+
+COPY --from=api-build /app/publish /kavita
+COPY --from=ui-build /src/UI/Web/dist/browser /kavita/wwwroot
+COPY Kavita.Server/config/appsettings.json /tmp/config/appsettings.json
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 5000
+WORKDIR /kavita
+
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
+  CMD curl -fsS http://localhost:5000/api/health || exit 1
+
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV TZ=UTC
+
+ENTRYPOINT ["/bin/bash"]
+CMD ["/entrypoint.sh"]

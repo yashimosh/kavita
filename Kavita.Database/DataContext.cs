@@ -83,6 +83,7 @@ public sealed class DataContext : IdentityDbContext<AppUser, AppRole, int,
     [Obsolete("Use IsBlacklisted field on Series")]
     public DbSet<SeriesBlacklist> SeriesBlacklist { get; set; } = null!;
     public DbSet<AppUserCollection> AppUserCollection { get; set; } = null!;
+    public DbSet<AppUserShelf> AppUserShelf { get; set; } = null!;
     public DbSet<ChapterPeople> ChapterPeople { get; set; } = null!;
     public DbSet<SeriesMetadataPeople> SeriesMetadataPeople { get; set; } = null!;
     public DbSet<EmailHistory> EmailHistory { get; set; } = null!;
@@ -137,6 +138,11 @@ public sealed class DataContext : IdentityDbContext<AppUser, AppRole, int,
         builder.Entity<AppUserCollection>()
             .Property(b => b.AgeRating)
             .HasDefaultValue(AgeRating.Unknown);
+
+        builder.Entity<AppUserShelf>()
+            .HasMany(s => s.Items)
+            .WithMany()
+            .UsingEntity(j => j.ToTable("AppUserShelfSeries"));
 
         #region Reading List
         builder.Entity<ReadingList>()

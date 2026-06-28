@@ -78,6 +78,11 @@
                                    [cdkDragDisabled]="!editMode" [cdkDragData]="navStream" [editMode]="editMode" icon="fa-list" [title]="t('collections')" link="/collections/" />
               }
 
+              @case (SideNavStreamType.Shelves) {
+                <app-side-nav-item cdkDrag cdkDragBoundary=".side-nav-container" cdkDragPreviewContainer="parent"
+                                   [cdkDragDisabled]="!editMode" [cdkDragData]="navStream" [editMode]="editMode" icon="fa-layer-group" [title]="'Shelves'" link="/shelves/" />
+              }
+
               @case (SideNavStreamType.WantToRead) {
                 <app-side-nav-item cdkDrag cdkDragBoundary=".side-nav-container" cdkDragPreviewContainer="parent"
                                    [cdkDragDisabled]="!editMode" [cdkDragData]="navStream" [editMode]="editMode" icon="fa-star" [title]="t('want-to-read')" link="/want-to-read/" />

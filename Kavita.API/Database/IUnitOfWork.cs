@@ -14,6 +14,7 @@ public interface IUnitOfWork
     ISettingsRepository SettingsRepository { get; }
     IAppUserProgressRepository AppUserProgressRepository { get; }
     ICollectionTagRepository CollectionTagRepository { get; }
+    IShelfRepository ShelfRepository { get; }
     IChapterRepository ChapterRepository { get; }
     IReadingListRepository ReadingListRepository { get; }
     ISeriesMetadataRepository SeriesMetadataRepository { get; }
