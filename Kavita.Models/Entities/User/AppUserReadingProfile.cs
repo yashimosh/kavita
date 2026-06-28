@@ -114,7 +114,7 @@ public class AppUserReadingProfile
     /// <summary>
     /// Book Reader Option: Allows tapping on side of screens to paginate
     /// </summary>
-    public bool BookReaderTapToPaginate { get; set; } = false;
+    public bool BookReaderTapToPaginate { get; set; } = true;
     /// <summary>
     /// Book Reader Option: What direction should the next/prev page buttons go
     /// </summary>
@@ -133,7 +133,7 @@ public class AppUserReadingProfile
     /// 2 column is fit to height, 2 columns
     /// </summary>
     /// <remarks>Defaults to Default</remarks>
-    public BookPageLayoutMode BookReaderLayoutMode { get; set; } = BookPageLayoutMode.Default;
+    public BookPageLayoutMode BookReaderLayoutMode { get; set; } = BookPageLayoutMode.Column1;
     /// <summary>
     /// Book Reader Option: A flag that hides the menu-ing system behind a click on the screen. This should be used with tap to paginate, but the app doesn't enforce this.
     /// </summary>
