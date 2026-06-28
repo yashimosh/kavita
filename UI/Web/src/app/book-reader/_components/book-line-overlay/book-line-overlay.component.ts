@@ -63,6 +63,7 @@ export class BookLineOverlayComponent implements OnInit {
   startXPath: string = '';
   endXPath: string = '';
   allTextFromSelection: string = '';
+  private savedRange: Range | null = null;
   selectedText = signal<string>('');
   mode = signal<BookLineOverlayMode>(BookLineOverlayMode.None);
   bookmarkForm: FormGroup = new FormGroup({
@@ -192,6 +193,7 @@ export class BookLineOverlayComponent implements OnInit {
    */
   private captureSelectionContext(selection: Selection, targetElement: Element): void {
     const range = selection.getRangeAt(0);
+    this.savedRange = range.cloneRange();
 
     // Get start and end containers
     const startContainer = this.getElementContainer(range.startContainer);
@@ -281,6 +283,7 @@ export class BookLineOverlayComponent implements OnInit {
 
     this.selectedText.set('');
     this.allTextFromSelection = '';
+    this.savedRange = null;
     const selection = window.getSelection();
     if (selection) {
       selection.removeAllRanges();
@@ -293,8 +296,8 @@ export class BookLineOverlayComponent implements OnInit {
     const windowText = window.getSelection();
     const selectedText = windowText?.toString() === '' ? this.selectedText() : windowText?.toString() ?? this.selectedText();
 
-    // Clone range NOW before reset() clears the selection
-    const savedRange = (windowText && windowText.rangeCount > 0) ? windowText.getRangeAt(0).cloneRange() : null;
+    // Use range captured at selection time (window selection is already cleared by the time this runs)
+    const rangeToHighlight = this.savedRange;
 
     const annotation = {
       id: 0,
@@ -322,7 +325,7 @@ export class BookLineOverlayComponent implements OnInit {
 
     this.annotationService.createAnnotation(annotation).subscribe(() => {
       this.toastr.success(translate('toasts.highlight-saved'));
-      if (savedRange) this.applyImmediateHighlight(savedRange);
+      if (rangeToHighlight) this.applyImmediateHighlight(rangeToHighlight);
       this.reset();
     });
   }
