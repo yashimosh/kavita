@@ -40,7 +40,7 @@
             style="position: relative;"
             (mousedown)="mouseDown($event)" >
 
-        <app-drawing-overlay [chapterId]="chapterId" [pageNumber]="pageNum()" />
+        <app-drawing-overlay [chapterId]="chapterId" [pageNumber]="pageNum()" [drawMode]="drawingActive()" />
 
         <div #readingHtml class="book-content {{layoutMode() | columnLayoutClass}} {{writingStyle() | writingStyleClass}}"
              [ngStyle]="{'max-height': columnHeight(), 'max-width': verticalBookContentWidth(), 'width': verticalBookContentWidth(), 'column-width': columnWidth(), 'padding-bottom': bookContentPaddingBottom()}"
@@ -113,6 +113,12 @@
               </button>
               <button class="btn btn-secondary btn-icon me-1" (click)="viewAnnotations()">
                 <i class="fa-solid fa-highlighter" aria-hidden="true"></i>
+              </button>
+              <button class="btn btn-icon me-1" [class.btn-primary]="drawingActive()" [class.btn-secondary]="!drawingActive()"
+                      (click)="toggleDrawing()" title="Draw / Annotate">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
               </button>
               <button class="btn btn-secondary btn-icon me-1" (click)="viewToCDrawer()">
                 <i class="fa-regular fa-rectangle-list" aria-hidden="true"></i>

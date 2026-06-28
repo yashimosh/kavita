@@ -202,6 +202,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    * Current Page
    */
   pageNum = signal<number>(0);
+  drawingActive = signal<boolean>(false);
   /**
    * Max Pages
    */
@@ -2445,6 +2446,10 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.readerService.openShortcutModal(KEYBIND_TARGETS, true);
   }
 
+
+  toggleDrawing() {
+    this.drawingActive.update(v => !v);
+  }
 
   viewBookmarkImages() {
     this.epubMenuService.openViewBookmarksDrawer(this.chapterId, this.pageNum(),

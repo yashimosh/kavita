@@ -141,6 +141,8 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   pageLayoutMode: PageViewModeType = 'multiple';
   scrollMode: ScrollModeType = ScrollModeType.vertical;
   spreadMode: SpreadType = 'off';
+  // -1 = disabled, 3 = ink/draw, 9 = highlight
+  annotationEditorMode: number = -1;
   isSearchOpen: boolean = false;
 
   canDownload = computed(() =>
@@ -354,6 +356,11 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     window.history.replaceState({}, '', newRoute);
     this.toastr.info(translate('toasts.incognito-off'));
     this.saveProgress();
+    this.cdRef.markForCheck();
+  }
+
+  setAnnotationMode(mode: number) {
+    this.annotationEditorMode = this.annotationEditorMode === mode ? -1 : mode;
     this.cdRef.markForCheck();
   }
 

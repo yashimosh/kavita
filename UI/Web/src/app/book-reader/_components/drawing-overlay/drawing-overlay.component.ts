@@ -22,12 +22,11 @@ const STORAGE_KEY = (chapterId: number, page: number) => `drawing_${chapterId}_$
 export class DrawingOverlayComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) chapterId!: number;
   @Input({ required: true }) pageNumber!: number;
+  @Input() drawMode = false;
 
   @ViewChild('canvas') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   private readonly cdRef = inject(ChangeDetectorRef);
-
-  drawMode = false;
   tool: Tool = 'pen';
   color = '#1a73e8';
   readonly colors = ['#1a73e8', '#e8390f', '#0f9e3e', '#f5a623', '#9b59b6', '#000000'];
@@ -267,11 +266,6 @@ export class DrawingOverlayComponent implements AfterViewInit, OnChanges, OnDest
   }
 
   // ── toolbar actions ───────────────────────────────────────────────────────
-
-  toggleDraw() {
-    this.drawMode = !this.drawMode;
-    this.cdRef.markForCheck();
-  }
 
   setTool(t: Tool) {
     this.tool = t;
