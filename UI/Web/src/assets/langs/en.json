@@ -4280,6 +4280,7 @@
         "k+-reset-key-success": "Your license has been un-registered. Use Edit button to re-register your instance and re-activate Kavita+",
         "library-deleted": "Library {{name}} has been removed",
         "copied-to-clipboard": "Copied to clipboard",
+        "highlight-saved": "Highlight saved",
         "no-next-chapter": "Could not find next {{entity}}",
         "no-prev-chapter": "Could not find previous {{entity}}",
         "load-next-chapter": "Next {{entity}} loaded",

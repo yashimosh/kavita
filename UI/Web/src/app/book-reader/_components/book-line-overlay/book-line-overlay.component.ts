@@ -15,6 +15,7 @@ import {fromEvent, merge, of} from "rxjs";
 import {catchError, debounceTime, tap} from "rxjs/operators";
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from "@angular/forms";
 import {ReaderService} from "../../../_services/reader.service";
+import {AnnotationService} from "../../../_services/annotation.service";
 import {ToastrService} from "ngx-toastr";
 import {translate, TranslocoDirective} from "@jsverse/transloco";
 import {EpubReaderMenuService} from "../../../_services/epub-reader-menu.service";
@@ -45,6 +46,7 @@ export class BookLineOverlayComponent implements OnInit {
   private readonly toastr = inject(ToastrService);
   private readonly elementRef = inject(ElementRef);
   private readonly epubMenuService = inject(EpubReaderMenuService);
+  private readonly annotationService = inject(AnnotationService);
   private readonly keyBindService = inject(KeyBindService);
 
   libraryId = input.required<number>();
@@ -285,6 +287,38 @@ export class BookLineOverlayComponent implements OnInit {
     }
     this.isOpen.emit(false);
     this.cdRef.markForCheck();
+  }
+
+  highlight() {
+    const windowText = window.getSelection();
+    const selectedText = windowText?.toString() === '' ? this.selectedText() : windowText?.toString() ?? this.selectedText();
+
+    const annotation = {
+      id: 0,
+      xPath: this.startXPath,
+      endingXPath: this.endXPath,
+      selectedText: selectedText,
+      comment: '',
+      containsSpoiler: false,
+      pageNumber: this.pageNumber(),
+      selectedSlotIndex: 0,
+      chapterTitle: '',
+      highlightCount: selectedText.length,
+      ownerUserId: 0,
+      ownerUsername: '',
+      createdUtc: '',
+      lastModifiedUtc: '',
+      context: this.allTextFromSelection,
+      chapterId: this.chapterId(),
+      libraryId: this.libraryId(),
+      volumeId: this.volumeId(),
+      seriesId: this.seriesId(),
+    } as Annotation;
+
+    this.annotationService.createAnnotation(annotation).subscribe(() => {
+      this.toastr.success(translate('toasts.highlight-saved'));
+      this.reset();
+    });
   }
 
   async copy() {
