@@ -175,10 +175,8 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
         KEYBIND_TARGETS.map(k => k.keyBindTarget as KeyBindTarget),
       );
 
-      // Use 512KB range chunks (default 64KB) — fewer requests over high-latency connections
+      // 512KB range chunks (default 64KB) — 8× fewer requests over high-latency connections
       pdfDefaultOptions.rangeChunkSize = 524288;
-      // Allow streaming so pages render as data arrives
-      pdfDefaultOptions.enableStreaming = true;
 
       effect(() => {
         const prefs = this.accountService.userPreferences();
