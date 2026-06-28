@@ -361,6 +361,10 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
 
   setAnnotationMode(mode: number) {
     this.annotationEditorMode = this.annotationEditorMode === mode ? -1 : mode;
+    const app = (window as any)['PDFViewerApplication'];
+    if (app?.eventBus) {
+      app.eventBus.dispatch('switchannotationeditormode', { source: null, mode: this.annotationEditorMode });
+    }
     this.cdRef.markForCheck();
   }
 
