@@ -4,30 +4,31 @@
   @let sideNavCollapsed = navService.sideNavCollapsedSignal();
 
   @if (accountService.currentUser()) {
-    <div class="side-nav-container"
-         [class.no-donate]="true"
+    <div class="side-nav-container no-donate"
          [class.closed]="sideNavCollapsed"
          [class.hidden]="!sideNavVisible">
       <div class="side-nav">
 
-        <!-- Home always first -->
         <app-side-nav-item icon="fa-home" [title]="t('home')" link="/home/" />
+        <app-side-nav-item icon="fa-book" title="All Books" link="/library/1/" [comparisonMethod]="'startsWith'" />
 
-        <!-- Shelves -->
-        <app-side-nav-item icon="fa-layer-group" [title]="'Shelves'" link="/shelves/" />
+        @if (!sideNavCollapsed) {
+          <div class="nav-section-label">My Shelves</div>
+        }
 
-        <!-- Libraries -->
-        @if (navStreams$ | async; as streams) {
-          @for (navStream of streams; track navStream.name) {
-            @if (navStream.streamType === SideNavStreamType.Library) {
-              <app-side-nav-item
-                [link]="'/library/' + navStream.libraryId + '/'"
-                [icon]="getLibraryTypeIcon(navStream.library!.type)"
-                [imageUrl]="getLibraryImage(navStream.library!)"
-                [title]="navStream.library!.name"
-                [comparisonMethod]="'startsWith'" />
-            }
+        @if (shelves$ | async; as shelves) {
+          @for (shelf of shelves; track shelf.id) {
+            <app-side-nav-item
+              icon="fa-layer-group"
+              [title]="shelf.title"
+              [link]="'/shelves/' + shelf.id" />
           }
+        }
+
+        @if (!sideNavCollapsed) {
+          <button class="nav-new-shelf-btn" (click)="openNewShelf()">
+            <i class="fa fa-plus"></i> New Shelf
+          </button>
         }
 
       </div>
@@ -36,6 +37,19 @@
 
   @if (breakpointService.isTabletOrBelow()) {
     <div class="side-nav-overlay" (click)="toggleNavBar()" [class.closed]="sideNavCollapsed"></div>
+  }
+
+  @if (showNewShelfModal) {
+    <div class="shelf-modal-backdrop" (click)="closeNewShelf()"></div>
+    <div class="shelf-modal">
+      <h6>New Shelf</h6>
+      <input class="form-control form-control-sm mb-2" [(ngModel)]="newShelfTitle"
+             placeholder="Shelf name" (keyup.enter)="createShelf()" autofocus />
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" (click)="createShelf()">Create</button>
+        <button class="btn btn-outline-secondary btn-sm" (click)="closeNewShelf()">Cancel</button>
+      </div>
+    </div>
   }
 
 </ng-container>

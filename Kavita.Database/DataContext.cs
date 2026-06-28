@@ -142,7 +142,13 @@ public sealed class DataContext : IdentityDbContext<AppUser, AppRole, int,
         builder.Entity<AppUserShelf>()
             .HasMany(s => s.Items)
             .WithMany()
-            .UsingEntity(j => j.ToTable("AppUserShelfSeries"));
+            .UsingEntity(j =>
+            {
+                j.ToTable("AppUserShelfSeries");
+                j.Property<int>("AppUserShelfId");
+                j.Property<int>("SeriesId");
+                j.HasKey("AppUserShelfId", "SeriesId");
+            });
 
         #region Reading List
         builder.Entity<ReadingList>()

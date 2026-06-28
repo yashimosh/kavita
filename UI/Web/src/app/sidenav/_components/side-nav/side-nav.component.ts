@@ -1,24 +1,27 @@
-import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject} from '@angular/core';
+import {ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, effect, inject} from '@angular/core';
 import {NavigationEnd, Router} from '@angular/router';
-import {filter, map} from 'rxjs/operators';
+import {filter, map, switchMap, tap} from 'rxjs/operators';
 import {ImageService} from 'src/app/_services/image.service';
-import {EVENTS, MessageHubService} from 'src/app/_services/message-hub.service';
 import {Library, LibraryType} from '../../../_models/library/library';
 import {AccountService} from '../../../_services/account.service';
 import {NavService} from '../../../_services/nav.service';
-import {takeUntilDestroyed, toObservable} from "@angular/core/rxjs-interop";
-import {BehaviorSubject, merge, Observable, of, ReplaySubject, startWith, switchMap, tap} from "rxjs";
+import {EVENTS, MessageHubService} from '../../../_services/message-hub.service';
+import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
+import {BehaviorSubject, merge, Observable, of, ReplaySubject, startWith} from "rxjs";
 import {AsyncPipe} from "@angular/common";
 import {SideNavItemComponent} from "../side-nav-item/side-nav-item.component";
 import {TranslocoDirective} from "@jsverse/transloco";
-import {SideNavStream} from "../../../_models/sidenav/sidenav-stream";
 import {SideNavStreamType} from "../../../_models/sidenav/sidenav-stream-type.enum";
 import {LicenseService} from "../../../_services/license.service";
 import {BreakpointService} from "../../../_services/breakpoint.service";
+import {ShelfService} from '../../../_services/shelf.service';
+import {Shelf} from '../../../_models/shelf';
+import {FormsModule} from '@angular/forms';
+import {ToastrService} from 'ngx-toastr';
 
 @Component({
   selector: 'app-side-nav',
-  imports: [SideNavItemComponent, TranslocoDirective, AsyncPipe],
+  imports: [SideNavItemComponent, TranslocoDirective, AsyncPipe, FormsModule],
   templateUrl: './side-nav.component.html',
   styleUrls: ['./side-nav.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -32,31 +35,17 @@ export class SideNavComponent {
   protected readonly licenseService = inject(LicenseService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly breakpointService = inject(BreakpointService);
+  private readonly shelfService = inject(ShelfService);
+  private readonly toastr = inject(ToastrService);
+  private readonly cdRef = inject(ChangeDetectorRef);
 
-  private cachedData: SideNavStream[] | null = null;
-  private loadDataSubject = new ReplaySubject<void>();
-  private loadData$ = this.loadDataSubject.asObservable();
+  showNewShelfModal = false;
+  newShelfTitle = '';
 
-  private loadDataOnInit$: Observable<SideNavStream[]> = this.loadData$.pipe(
-    switchMap(() => {
-      if (this.cachedData != null) return of(this.cachedData);
-      return this.navService.getSideNavStreams().pipe(
-        map(data => { this.cachedData = data; return data; })
-      );
-    })
-  );
+  private shelvesRefresh$ = new BehaviorSubject<void>(undefined);
 
-  navStreams$: Observable<SideNavStream[]> = merge(
-    this.loadDataOnInit$.pipe(takeUntilDestroyed(this.destroyRef)),
-    this.messageHub.messages$.pipe(
-      filter(event => event.event === EVENTS.LibraryModified || event.event === EVENTS.SideNavUpdate),
-      tap(() => { this.cachedData = null; }),
-      switchMap(() => this.loadDataOnInit$),
-      takeUntilDestroyed(this.destroyRef),
-    )
-  ).pipe(
-    startWith(null),
-    filter(data => data !== null),
+  shelves$: Observable<Shelf[]> = this.shelvesRefresh$.pipe(
+    switchMap(() => this.shelfService.getShelves()),
     takeUntilDestroyed(this.destroyRef),
   );
 
@@ -72,15 +61,35 @@ export class SideNavComponent {
     if (this.breakpointService.isMobile()) {
       this.navService.collapseSideNav(true);
     }
-
     this.collapseSideNavOnMobileNav$.subscribe(() => {
       this.navService.collapseSideNav(false);
     });
+  }
 
-    effect(() => {
-      const user = this.accountService.currentUser();
-      if (!user) return;
-      this.loadDataSubject.next();
+  toggleNavBar() {
+    this.navService.toggleSideNav();
+  }
+
+  openNewShelf() {
+    this.showNewShelfModal = true;
+    this.cdRef.markForCheck();
+  }
+
+  closeNewShelf() {
+    this.showNewShelfModal = false;
+    this.newShelfTitle = '';
+    this.cdRef.markForCheck();
+  }
+
+  createShelf() {
+    const title = this.newShelfTitle.trim();
+    if (!title) return;
+    this.shelfService.createShelf(title).subscribe({
+      next: () => {
+        this.closeNewShelf();
+        this.shelvesRefresh$.next();
+      },
+      error: () => this.toastr.error('Could not create shelf')
     });
   }
 
@@ -101,10 +110,6 @@ export class SideNavComponent {
   getLibraryImage(library: Library) {
     if (library.coverImage) return this.imageService.getLibraryCoverImage(library.id);
     return null;
-  }
-
-  toggleNavBar() {
-    this.navService.toggleSideNav();
   }
 
   protected readonly SideNavStreamType = SideNavStreamType;
