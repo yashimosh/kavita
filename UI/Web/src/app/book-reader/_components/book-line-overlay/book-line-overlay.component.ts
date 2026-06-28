@@ -293,6 +293,9 @@ export class BookLineOverlayComponent implements OnInit {
     const windowText = window.getSelection();
     const selectedText = windowText?.toString() === '' ? this.selectedText() : windowText?.toString() ?? this.selectedText();
 
+    // Clone range NOW before reset() clears the selection
+    const savedRange = (windowText && windowText.rangeCount > 0) ? windowText.getRangeAt(0).cloneRange() : null;
+
     const annotation = {
       id: 0,
       xPath: this.startXPath,
@@ -319,8 +322,19 @@ export class BookLineOverlayComponent implements OnInit {
 
     this.annotationService.createAnnotation(annotation).subscribe(() => {
       this.toastr.success(translate('toasts.highlight-saved'));
+      if (savedRange) this.applyImmediateHighlight(savedRange);
       this.reset();
     });
+  }
+
+  private applyImmediateHighlight(range: Range): void {
+    try {
+      const span = document.createElement('span');
+      span.style.cssText = 'background-color: rgba(255, 235, 59, 0.4); display: inline;';
+      range.surroundContents(span);
+    } catch {
+      // Cross-element selection: server-driven page reload will handle it
+    }
   }
 
   async copy() {
