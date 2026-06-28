@@ -60,20 +60,21 @@ public class ReaderController(ICacheService cacheService,
     public async Task<ActionResult> GetPdf(int chapterId, string apiKey, bool extractPdf = false)
     {
         if (!UserContext.IsAuthenticated) return Unauthorized();
-        var chapter = await cacheService.Ensure(chapterId, extractPdf);
-        if (chapter == null) return NotFound();
 
-        try
+        if (extractPdf)
         {
+            var chapter = await cacheService.Ensure(chapterId, true);
+            if (chapter == null) return NotFound();
+            var cachedPath = cacheService.GetCachedFile(chapter);
+            return CachedFile(cachedPath, 3600);
+        }
 
-            var path = cacheService.GetCachedFile(chapter);
-            return CachedFile(path, maxAge: TimeSpan.FromHours(1).Seconds);
-        }
-        catch (Exception)
-        {
-            cacheService.CleanupChapters([chapterId]);
-            throw;
-        }
+        // Serve PDF directly from library — skip cache copy to avoid I/O delay
+        var ch = await unitOfWork.ChapterRepository.GetChapterAsync(chapterId);
+        if (ch == null) return NotFound();
+        var file = ch.Files.FirstOrDefault();
+        if (file == null) return NotFound();
+        return CachedFile(file.FilePath, 3600);
     }
 
     /// <summary>
