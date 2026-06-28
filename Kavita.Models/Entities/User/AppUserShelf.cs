@@ -15,7 +15,7 @@ public class AppUserShelf : IEntityDate
     public string? Summary { get; set; }
     public string? CoverImage { get; set; }
 
-    public ICollection<Series.Series> Items { get; set; } = [];
+    public ICollection<Series> Items { get; set; } = [];
 
     public DateTime Created { get; set; }
     public DateTime LastModified { get; set; }
