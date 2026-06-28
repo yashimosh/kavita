@@ -17,7 +17,12 @@
         </div>
       }
     </div>
-    <h5 subtitle>{{ series().length }} book{{ series().length !== 1 ? 's' : '' }}</h5>
+    <h5 subtitle>
+      {{ series().length }} book{{ series().length !== 1 ? 's' : '' }}
+      <button class="btn btn-sm btn-primary ms-2" (click)="addFromLibrary()">
+        <i class="fa fa-plus me-1"></i>Add from Library
+      </button>
+    </h5>
   </app-side-nav-companion-bar>
 
   <!-- Upload drop zone -->
