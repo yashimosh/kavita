@@ -1281,6 +1281,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       this.updateSingleImagePageStyles();
 
       this.page.set(this.domSanitizer.bypassSecurityTrustHtml(content));
+      this.bookService.prefetchPages(this.chapterId, this.pageNum(), this.maxPages());
 
       this.scrollService.unlock();
       this.setupObservers();
