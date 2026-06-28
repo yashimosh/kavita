@@ -60,5 +60,13 @@ HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV TZ=UTC
 
-ENTRYPOINT ["/bin/bash"]
-CMD ["/entrypoint.sh"]
+COPY --chmod=755 <<'EOF' /start.sh
+#!/bin/bash
+if [ ! -f /kavita/config/appsettings.json ]; then
+    cp /tmp/config/appsettings.json /kavita/config/appsettings.json
+fi
+cd /kavita
+exec /usr/share/dotnet/dotnet Kavita.Server.dll
+EOF
+
+ENTRYPOINT ["/bin/bash", "/start.sh"]
