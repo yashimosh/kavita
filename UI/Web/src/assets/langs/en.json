@@ -4435,6 +4435,8 @@
         "add-to-reading-list": "Add to Reading List",
         "add-to-reading-list-tooltip": "Add to a Reading List",
         "add-to-collection": "Add to Collection",
+        "add-to-shelf": "Add to Shelf",
+        "add-to-shelf-tooltip": "Add book to one of your shelves",
         "add-to-collection-tooltip": "Add series to a collection",
         "send-to": "Send To",
         "delete": "Delete",

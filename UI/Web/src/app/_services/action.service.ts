@@ -64,6 +64,8 @@ import {addToModal, editModal} from "../_models/modal/modal-options";
 import {ModalService, TypedModalRef} from "./modal.service";
 import {FilterService} from "src/app/_services/filter.service";
 import {DashboardService} from "./dashboard.service";
+import {ShelfService} from "./shelf.service";
+import {Shelf} from "../_models/shelf";
 
 
 export type LibraryActionCallback = (library: Partial<Library>) => void;
@@ -102,6 +104,7 @@ export class ActionService {
   private readonly annotationsService = inject(AnnotationService);
   private readonly sideNavService = inject(NavService);
   private readonly filterService = inject(FilterService);
+  private readonly shelfService = inject(ShelfService);
   private readonly dashboardService = inject(DashboardService);
 
   private readingListModalRef: TypedModalRef<BulkSetReadingProfileModalComponent> |  TypedModalRef<ListSelectModalComponent<ReadingList>> | null = null;
@@ -331,6 +334,54 @@ export class ActionService {
             this.collectionModalRef = null;
             subscriber.complete();
           });
+        });
+      }
+
+      case Action.AddToShelf: {
+        const shelfRef = this.modalService.open(ListSelectModalComponent, addToModal()) as TypedModalRef<ListSelectModalComponent<Shelf>>;
+        shelfRef.setInput('title', 'Add to Shelf');
+        shelfRef.setInput('showCreate', true);
+        shelfRef.setInput('createLabel', 'New shelf name');
+        shelfRef.setInput('createInitialValue', '');
+        shelfRef.setInput('inputItems', []);
+        shelfRef.setInput('loading', true);
+
+        this.shelfService.getShelves().pipe(
+          take(1),
+          catchError(() => EMPTY),
+          finalize(() => shelfRef.setInput('loading', false))
+        ).subscribe(shelves => {
+          shelfRef.setInput('inputItems', shelves.map(s => ({ label: s.title, value: s })));
+        });
+
+        shelfRef.setInput('interceptCreate', (name: string) =>
+          this.shelfService.createShelf(name).pipe(
+            switchMap(() => this.shelfService.getShelves()),
+            take(1),
+            switchMap(shelves => {
+              const created = shelves.find(s => s.title === name);
+              if (!created) return EMPTY;
+              return this.shelfService.addSeriesToShelf(created.id, [series.id]).pipe(
+                tap(() => this.toastr.success(`Added to "${name}"`))
+              );
+            })
+          )
+        );
+
+        shelfRef.setInput('interceptConfirm', (item: Shelf | Shelf[]) => {
+          const shelf = item as Shelf;
+          this.shelfService.addSeriesToShelf(shelf.id, [series.id]).subscribe(() => {
+            this.toastr.success(`Added to "${shelf.title}"`);
+            shelfRef.close();
+          });
+        });
+
+        return new Observable<ActionResult<Series>>(subscriber => {
+          shelfRef.closed.subscribe(() => {
+            subscriber.next(this.fromAction(action, series, 'none'));
+            subscriber.complete();
+          });
+          shelfRef.dismissed.subscribe(() => subscriber.complete());
         });
       }
 

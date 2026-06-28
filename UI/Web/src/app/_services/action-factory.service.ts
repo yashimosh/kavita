@@ -457,274 +457,39 @@ export class ActionFactoryService {
 
     this.seriesActions = [
       {
-        action: Action.Submenu,
+        action: Action.MarkAsRead,
         title: 'mark-as-read',
         description: 'mark-as-read-tooltip',
-
         callback: this.dummyCallback,
         shouldRender: this.dummyShouldRender,
-
         requiredRoles: [],
-        children: [
-          {
-            action: Action.MarkAsRead,
-            title: 'mark-as-read',
-            description: 'mark-as-read-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          },
-          {
-            action: Action.MarkAsReadWithSession,
-            title: 'mark-as-read-with-session',
-            description: 'mark-as-read-with-session-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          }
-        ],
+        children: [],
       },
       {
         action: Action.MarkAsUnread,
         title: 'mark-as-unread',
         description: 'mark-as-unread-tooltip',
-
         callback: this.dummyCallback,
         shouldRender: this.dummyShouldRender,
-
         requiredRoles: [],
         children: [],
       },
       {
-        action: Action.Scan,
-        title: 'scan-series',
-        description: 'scan-series-tooltip',
-
+        action: Action.AddToShelf,
+        title: 'add-to-shelf',
+        description: 'add-to-shelf-tooltip',
         callback: this.dummyCallback,
         shouldRender: this.dummyShouldRender,
-
-        requiredRoles: [Role.Admin],
-        children: [],
-      },
-      {
-        action: Action.Submenu,
-        title: 'add-to',
-        description: '',
-
-        callback: this.dummyCallback,
-        shouldRender: this.dummyShouldRender,
-
         requiredRoles: [],
-        children: [
-          {
-            action: Action.AddToWantToReadList,
-            title: 'add-to-want-to-read',
-            description: 'add-to-want-to-read-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          },
-          {
-            action: Action.RemoveFromWantToReadList,
-            title: 'remove-from-want-to-read',
-            description: 'remove-from-want-to-read-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          },
-          {
-            action: Action.AddToReadingList,
-            title: 'add-to-reading-list',
-            description: 'add-to-reading-list-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          },
-          {
-            action: Action.AddToCollection,
-            title: 'add-to-collection',
-            description: 'add-to-collection-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          }
-        ],
-      },
-      {
-        action: Action.Submenu,
-        title: 'send-to',
-        description: 'send-to-tooltip',
-
-        callback: this.dummyCallback,
-        shouldRender: this.dummyShouldRender,
-
-        requiredRoles: [],
-        children: [
-          {
-            action: Action.SendTo,
-            title: '',
-            description: '',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            dynamicList: this.sendToChildren(),
-            children: []
-          }
-        ],
-      },
-      {
-        action: Action.Submenu,
-        title: 'reading-profiles',
-        description: '',
-
-        callback: this.dummyCallback,
-        shouldRender: this.dummyShouldRender,
-
-        requiredRoles: [],
-        children: [
-          {
-            action: Action.SetReadingProfile,
-            title: 'set-reading-profile',
-            description: 'set-reading-profile-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          },
-          {
-            action: Action.ClearReadingProfile,
-            title: 'clear-reading-profile',
-            description: 'clear-reading-profile-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          },
-        ],
-      },
-      {
-        action: Action.Submenu,
-        title: 'others',
-        description: '',
-
-        callback: this.dummyCallback,
-        shouldRender: this.dummyShouldRender,
-
-        requiredRoles: [],
-        children: [
-          {
-            action: Action.RemoveFromOnDeck,
-            title: 'remove-from-on-deck',
-            description: 'remove-from-on-deck-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [],
-            children: [],
-          },
-          {
-            action: Action.RefreshMetadata,
-            title: 'refresh-covers',
-            description: 'refresh-covers-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [Role.Admin],
-            children: [],
-          },
-          {
-            action: Action.GenerateColorScape,
-            title: 'generate-colorscape',
-            description: 'generate-colorscape-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [Role.Admin],
-            children: [],
-          },
-          {
-            action: Action.AnalyzeFiles,
-            title: 'analyze-files',
-            description: 'analyze-files-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [Role.Admin],
-            children: [],
-          },
-          {
-            action: Action.Delete,
-            title: 'delete',
-            description: 'delete-tooltip',
-
-            callback: this.dummyCallback,
-            shouldRender: this.dummyShouldRender,
-
-            requiredRoles: [Role.Admin],
-            class: 'danger',
-            children: [],
-          },
-        ],
-      },
-      {
-        action: Action.Match,
-        title: 'match',
-        description: 'match-tooltip',
-
-        callback: this.dummyCallback,
-        shouldRender: this.dummyShouldRender,
-
-        requiredRoles: [Role.Admin],
         children: [],
       },
       {
         action: Action.Download,
         title: 'download',
         description: 'download-tooltip',
-
         callback: this.dummyCallback,
         shouldRender: this.dummyShouldRender,
-
         requiredRoles: [Role.Download],
-        children: [],
-      },
-      {
-        action: Action.Edit,
-        title: 'edit',
-        description: 'edit-tooltip',
-
-        callback: this.dummyCallback,
-        shouldRender: this.dummyShouldRender,
-
-        requiredRoles: [Role.Admin],
         children: [],
       },
     ];
