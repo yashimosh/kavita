@@ -67,7 +67,7 @@ public class BaseApiController : ControllerBase
     /// <see cref="StatusCodeResult"/> with 304 if client's cached version is current.
     /// <see cref="PhysicalFileResult"/> with the file content and caching headers otherwise.
     /// </returns>
-    protected ActionResult CachedFile(string? path, int maxAge = 300)
+    protected ActionResult CachedFile(string? path, int maxAge = 86400)
     {
         if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return NotFound();
 
@@ -77,7 +77,7 @@ public class BaseApiController : ControllerBase
         if (Request.Headers.IfNoneMatch.Any(t => t == etag)) return StatusCode(304);
 
         Response.Headers.ETag = etag;
-        Response.Headers.CacheControl = $"private, max-age={maxAge}, stale-while-revalidate={maxAge}";
+        Response.Headers.CacheControl = $"private, max-age={maxAge}, stale-while-revalidate=3600";
 
         var contentType = MimeTypeMap.GetMimeType(Path.GetExtension(path));
         return PhysicalFile(path, contentType, Path.GetFileName(path), enableRangeProcessing: true);

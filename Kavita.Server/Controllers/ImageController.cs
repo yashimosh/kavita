@@ -42,7 +42,7 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
     public async Task<ActionResult> GetChapterCoverImage(int chapterId, string apiKey)
     {
         var path = Path.Join(directoryService.CoverImageDirectory, await unitOfWork.ChapterRepository.GetChapterCoverImageAsync(chapterId));
-        return PhysicalFile(path);
+        return CachedFile(path);
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
     public async Task<ActionResult> GetLibraryCoverImage(int libraryId, string apiKey)
     {
         var path = Path.Join(directoryService.CoverImageDirectory, await unitOfWork.LibraryRepository.GetLibraryCoverImageAsync(libraryId));
-        return PhysicalFile(path);
+        return CachedFile(path);
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
     public async Task<ActionResult> GetVolumeCoverImage(int volumeId, string apiKey)
     {
         var path = Path.Join(directoryService.CoverImageDirectory, await unitOfWork.VolumeRepository.GetVolumeCoverImageAsync(volumeId));
-        return PhysicalFile(path);
+        return CachedFile(path);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
     public async Task<ActionResult> GetSeriesCoverImage(int seriesId, string apiKey)
     {
         var path = Path.Join(directoryService.CoverImageDirectory, await unitOfWork.SeriesRepository.GetSeriesCoverImageAsync(seriesId));
-        return PhysicalFile(path);
+        return CachedFile(path);
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
             path = await collectionTagService.GenerateCollectionCoverImage(collectionTagId);
         }
 
-        return PhysicalFile(path);
+        return CachedFile(path);
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
             await unitOfWork.CommitAsync();
         }
 
-        return PhysicalFile(path);
+        return CachedFile(path);
     }
 
     /// <summary>
@@ -241,7 +241,7 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
     public async Task<ActionResult> GetPersonCoverImage(int personId, string apiKey)
     {
         var path = Path.Join(directoryService.CoverImageDirectory, await unitOfWork.UserRepository.GetPersonCoverImageAsync(personId));
-        return PhysicalFile(path);
+        return CachedFile(path);
     }
 
     /// <summary>

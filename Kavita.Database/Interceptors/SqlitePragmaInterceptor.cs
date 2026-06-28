@@ -33,14 +33,23 @@ public sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
     private static void ApplyPragmas(DbConnection connection)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA busy_timeout = {BusyTimeoutMs};";
+        command.CommandText = BuildPragmas();
         command.ExecuteNonQuery();
     }
 
     private static async Task ApplyPragmasAsync(DbConnection connection, CancellationToken ct)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA busy_timeout = {BusyTimeoutMs};";
+        command.CommandText = BuildPragmas();
         await command.ExecuteNonQueryAsync(ct);
     }
+
+    private static string BuildPragmas() => $"""
+        PRAGMA journal_mode = WAL;
+        PRAGMA busy_timeout = {BusyTimeoutMs};
+        PRAGMA synchronous = NORMAL;
+        PRAGMA cache_size = -32000;
+        PRAGMA temp_store = MEMORY;
+        PRAGMA mmap_size = 134217728;
+        """;
 }
