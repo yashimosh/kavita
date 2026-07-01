@@ -49,6 +49,8 @@ import {AnnotationService} from "../../../_services/annotation.service";
 import {ProfileIconComponent} from "../../../_single-module/profile-icon/profile-icon.component";
 import {BreakpointService} from "../../../_services/breakpoint.service";
 import {ModalService} from "../../../_services/modal.service";
+import {ShelfService} from "../../../_services/shelf.service";
+import {ToastrService} from "ngx-toastr";
 
 @Component({
   selector: 'app-nav-header',
@@ -74,6 +76,10 @@ export class NavHeaderComponent {
   protected readonly metadataService = inject(MetadataService);
   private readonly annotationService = inject(AnnotationService);
   private readonly document = inject(DOCUMENT);
+  private readonly shelfService = inject(ShelfService);
+  private readonly toastr = inject(ToastrService);
+
+  isUploading = signal(false);
 
 
   readonly searchViewRef = viewChild.required<any>('search');
@@ -94,6 +100,29 @@ export class NavHeaderComponent {
 
   moveFocus() {
     this.document.getElementById('content')?.focus();
+  }
+
+  triggerUpload() {
+    this.document.getElementById('nav-upload-input')?.click();
+  }
+
+  onUploadFile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    this.isUploading.set(true);
+    const title = file.name.replace(/\.(epub|pdf|cbz|cbr)$/i, '');
+    this.shelfService.uploadBook(file, title).subscribe({
+      next: res => {
+        this.isUploading.set(false);
+        this.toastr.success(res.message || 'Book added successfully');
+      },
+      error: () => {
+        this.isUploading.set(false);
+        this.toastr.error('Upload failed. Check the file format.');
+      }
+    });
   }
 
   onChangeSearch(evt: SearchEvent) {

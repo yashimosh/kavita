@@ -190,6 +190,16 @@
 
         @if (user) {
 
+          <!-- Upload book button -->
+          <input id="nav-upload-input" type="file" accept=".epub,.pdf,.cbz,.cbr" style="display:none" (change)="onUploadFile($event)" />
+          <button class="btn btn-icon me-1" [disabled]="isUploading()" (click)="triggerUpload()" title="Add Book">
+            @if (isUploading()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            } @else {
+              <i class="fa fa-plus nav" aria-hidden="true"></i>
+            }
+          </button>
+
           <app-download-queue-widget />
 
           @if (accountService.hasAdminRole()) {
