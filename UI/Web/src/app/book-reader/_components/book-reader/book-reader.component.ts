@@ -208,6 +208,16 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   maxPages = signal<number>(1);
   /**
+   * Ticks on every scroll/page-move so computed signals depending on live scroll
+   * position (which isn't itself a signal) know to recompute.
+   */
+  private scrollTick = signal<number>(0);
+  /**
+   * Virtual (screen) page count per section (keyed by pageNum), populated as sections are visited.
+   * Used to approximate a true, book-wide screen-page count in column layout mode.
+   */
+  private sectionVirtualPageCounts = new Map<number, number>();
+  /**
    * This allows for exploration into different chapters
    */
   adhocPageHistory: Stack<HistoryPoint> = new Stack<HistoryPoint>();
@@ -613,11 +623,38 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     this.virtualizedPageNum = computed(() => {
-      return this.pageNum();
+      this.scrollTick(); // recompute on scroll/page-move, which reads live (untracked) DOM scroll position
+      const layoutMode = this.layoutMode();
+      const pageNum = this.pageNum();
+
+      if (layoutMode === BookPageLayoutMode.Default) return pageNum;
+
+      const [currentVirtualPage] = this.getVirtualPage();
+      const avg = this.averageVirtualPageCount();
+
+      let precedingSections = 0;
+      for (let i = 0; i < pageNum; i++) {
+        precedingSections += this.sectionVirtualPageCounts.get(i) ?? avg;
+      }
+
+      return Math.round(precedingSections + Math.max(0, currentVirtualPage - 1));
     });
 
     this.virtualizedMaxPages = computed(() => {
-      return this.maxPages();
+      this.scrollTick();
+      const layoutMode = this.layoutMode();
+      const maxPages = this.maxPages();
+
+      if (layoutMode === BookPageLayoutMode.Default) return maxPages;
+
+      const avg = this.averageVirtualPageCount();
+
+      let total = 0;
+      for (let i = 0; i < maxPages; i++) {
+        total += this.sectionVirtualPageCounts.get(i) ?? avg;
+      }
+
+      return Math.max(1, Math.round(total));
     });
 
     effect(() => {
@@ -805,6 +842,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       this.delayedScrollEventTimeout = setTimeout(() => this.handleScrollEvent(bypassSave), SCROLL_DELAY);
       return;
     }
+
+    this.scrollTick.update(v => v + 1);
 
     // TODO: See if we can move this to a service for ToC
     // Highlight the current chapter we are on
@@ -1499,6 +1538,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading.set(false);
     this.cdRef.markForCheck();
 
+    this.recordVirtualPageCount();
+
     this.annotationService.getAllAnnotations(this.chapterId).subscribe(_ => {
       this.setupAnnotationElements();
     });
@@ -1779,6 +1820,28 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   convertVwToPx(vwValue: number) {
     const viewportWidth = Math.max(this.readingSectionElemRef()?.nativeElement?.clientWidth ?? 0, window.innerWidth || 0);
     return (vwValue * viewportWidth) / 100;
+  }
+
+  /**
+   * Caches the current section's virtual (screen) page count, so the book-wide page
+   * counter can approximate true screen-page progress instead of just counting sections.
+   */
+  private recordVirtualPageCount() {
+    if (this.layoutMode() === BookPageLayoutMode.Default) return;
+
+    const [, totalVirtualPages] = this.getVirtualPage();
+    if (totalVirtualPages <= 0) return;
+
+    this.sectionVirtualPageCounts.set(this.pageNum(), totalVirtualPages);
+    this.scrollTick.update(v => v + 1);
+  }
+
+  private averageVirtualPageCount(): number {
+    if (this.sectionVirtualPageCounts.size === 0) return 1;
+
+    let sum = 0;
+    for (const count of this.sectionVirtualPageCounts.values()) sum += count;
+    return sum / this.sectionVirtualPageCounts.size;
   }
 
   /**
