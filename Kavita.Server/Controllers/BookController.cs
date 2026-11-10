@@ -11,6 +11,7 @@ using Kavita.Models.DTOs.Reader;
 using Kavita.Models.Entities.Enums;
 using Kavita.Server.Attributes;
 using Kavita.Services;
+using Kavita.Services.Metadata;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VersOne.Epub;
@@ -38,6 +39,7 @@ public class BookController(
         var dto = await unitOfWork.ChapterRepository.GetChapterInfoDtoAsync(chapterId);
         if (dto == null) return BadRequest(await localizationService.TranslateAsync(UserId, "chapter-doesnt-exist"));
         var bookTitle = string.Empty;
+        IList<int>? sectionWordCounts = null;
 
 
         switch (dto.SeriesFormat)
@@ -52,6 +54,13 @@ public class BookController(
                 if (book == null) return NotFound();
 
                 bookTitle = book.Title;
+
+                var lettersPerPage = await bookService.GetWordCountsPerPage(file);
+                if (lettersPerPage != null)
+                {
+                    sectionWordCounts = lettersPerPage.OrderBy(kvp => kvp.Key)
+                        .Select(kvp => WordCountAnalyzerService.GetWordCount(kvp.Value)).ToList();
+                }
 
                 break;
             }
@@ -88,6 +97,7 @@ public class BookController(
             LibraryId = dto.LibraryId,
             IsSpecial = dto.IsSpecial,
             Pages = dto.Pages,
+            SectionWordCounts = sectionWordCounts,
         };
 
 
