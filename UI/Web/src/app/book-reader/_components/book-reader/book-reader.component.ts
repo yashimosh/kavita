@@ -218,6 +218,16 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   private sectionVirtualPageCounts = new Map<number, number>();
   /**
+   * Word count per visited section (keyed by pageNum). Lets us scale unvisited sections by the book's total word count
+   * rather than assuming every section is as long as the ones we happened to open.
+   */
+  private sectionWordCounts = new Map<number, number>();
+  /**
+   * Layout inputs the cached screen counts were measured with. If any change (font size, margins, window size, layout mode…)
+   * the cached counts are stale and must be discarded.
+   */
+  private virtualPageLayoutSignature = '';
+  /**
    * This allows for exploration into different chapters
    */
   adhocPageHistory: Stack<HistoryPoint> = new Stack<HistoryPoint>();
@@ -630,11 +640,10 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       if (layoutMode === BookPageLayoutMode.Default) return pageNum;
 
       const [currentVirtualPage] = this.getVirtualPage();
-      const avg = this.averageVirtualPageCount();
 
       let precedingSections = 0;
       for (let i = 0; i < pageNum; i++) {
-        precedingSections += this.sectionVirtualPageCounts.get(i) ?? avg;
+        precedingSections += this.estimateSectionScreens(i);
       }
 
       return Math.round(precedingSections + Math.max(0, currentVirtualPage - 1));
@@ -647,11 +656,9 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
       if (layoutMode === BookPageLayoutMode.Default) return maxPages;
 
-      const avg = this.averageVirtualPageCount();
-
       let total = 0;
       for (let i = 0; i < maxPages; i++) {
-        total += this.sectionVirtualPageCounts.get(i) ?? avg;
+        total += this.estimateSectionScreens(i);
       }
 
       return Math.max(1, Math.round(total));
@@ -1829,19 +1836,53 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private recordVirtualPageCount() {
     if (this.layoutMode() === BookPageLayoutMode.Default) return;
 
+    // Measurements are only comparable under identical layout; drop them if anything that affects pagination changed.
+    const signature = JSON.stringify([this.layoutMode(), this.writingStyle(), this.pageSize(), this.pageStyles()]);
+    if (signature !== this.virtualPageLayoutSignature) {
+      this.virtualPageLayoutSignature = signature;
+      this.sectionVirtualPageCounts.clear();
+      this.sectionWordCounts.clear();
+    }
+
     const [, totalVirtualPages] = this.getVirtualPage();
     if (totalVirtualPages <= 0) return;
 
+    const text = this.bookContentElemRef()?.nativeElement?.textContent?.trim() ?? '';
+    const words = text.length === 0 ? 0 : text.split(/\s+/).length;
+
     this.sectionVirtualPageCounts.set(this.pageNum(), totalVirtualPages);
+    this.sectionWordCounts.set(this.pageNum(), words);
     this.scrollTick.update(v => v + 1);
   }
 
-  private averageVirtualPageCount(): number {
-    if (this.sectionVirtualPageCounts.size === 0) return 1;
+  /**
+   * Estimated screen-page count of a section: measured if visited, otherwise derived from the book's word count
+   * and the words-per-screen density measured across visited sections (falls back to the visited average).
+   */
+  private estimateSectionScreens(section: number): number {
+    const measured = this.sectionVirtualPageCounts.get(section);
+    if (measured !== undefined) return measured;
 
-    let sum = 0;
-    for (const count of this.sectionVirtualPageCounts.values()) sum += count;
-    return sum / this.sectionVirtualPageCounts.size;
+    const visited = this.sectionVirtualPageCounts.size;
+    if (visited === 0) return 1;
+
+    let screens = 0;
+    let words = 0;
+    for (const [i, count] of this.sectionVirtualPageCounts) {
+      screens += count;
+      words += this.sectionWordCounts.get(i) ?? 0;
+    }
+
+    const totalWords = this.chapter?.wordCount ?? 0;
+    const unvisited = Math.max(1, this.maxPages() - visited);
+    const unvisitedWords = totalWords - words;
+
+    if (words > 0 && unvisitedWords > 0) {
+      const wordsPerScreen = words / screens;
+      return Math.max(1, (unvisitedWords / unvisited) / wordsPerScreen);
+    }
+
+    return screens / visited;
   }
 
   /**
