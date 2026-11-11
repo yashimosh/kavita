@@ -218,6 +218,19 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   private sectionVirtualPageCounts = new Map<number, number>();
   /**
+   * Word count of every section (from the server), indexed by pageNum. Null if unavailable (e.g. older server).
+   */
+  private sectionWordCounts: number[] | null = null;
+  /**
+   * Words that fit on one screen page, calibrated from sections we've measured. Null until we have a reliable sample.
+   */
+  private wordsPerScreen: number | null = null;
+  /**
+   * Layout inputs the cached screen counts were measured with. If any change (font size, margins, window size, layout mode…)
+   * the cached counts are stale and must be discarded.
+   */
+  private virtualPageLayoutSignature = '';
+  /**
    * This allows for exploration into different chapters
    */
   adhocPageHistory: Stack<HistoryPoint> = new Stack<HistoryPoint>();
@@ -630,11 +643,10 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       if (layoutMode === BookPageLayoutMode.Default) return pageNum;
 
       const [currentVirtualPage] = this.getVirtualPage();
-      const avg = this.averageVirtualPageCount();
 
       let precedingSections = 0;
       for (let i = 0; i < pageNum; i++) {
-        precedingSections += this.sectionVirtualPageCounts.get(i) ?? avg;
+        precedingSections += this.estimateSectionScreens(i);
       }
 
       return Math.round(precedingSections + Math.max(0, currentVirtualPage - 1));
@@ -647,11 +659,9 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
       if (layoutMode === BookPageLayoutMode.Default) return maxPages;
 
-      const avg = this.averageVirtualPageCount();
-
       let total = 0;
       for (let i = 0; i < maxPages; i++) {
-        total += this.sectionVirtualPageCounts.get(i) ?? avg;
+        total += this.estimateSectionScreens(i);
       }
 
       return Math.max(1, Math.round(total));
@@ -1002,6 +1012,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       this.bookTitle.set(info.bookTitle);
+      this.sectionWordCounts = info.sectionWordCounts ?? null;
       this.kavitaTitleStrategy.setFormattedTitle(this.bookTitle() + ' Reader');
       this.cdRef.markForCheck();
 
@@ -1829,11 +1840,56 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private recordVirtualPageCount() {
     if (this.layoutMode() === BookPageLayoutMode.Default) return;
 
+    // Measurements are only comparable under identical layout; drop them if anything that affects pagination changed.
+    const signature = JSON.stringify([this.layoutMode(), this.writingStyle(), this.pageSize(), this.pageStyles()]);
+    if (signature !== this.virtualPageLayoutSignature) {
+      this.virtualPageLayoutSignature = signature;
+      this.sectionVirtualPageCounts.clear();
+      this.wordsPerScreen = null;
+    }
+
     const [, totalVirtualPages] = this.getVirtualPage();
     if (totalVirtualPages <= 0) return;
 
     this.sectionVirtualPageCounts.set(this.pageNum(), totalVirtualPages);
+    this.wordsPerScreen = this.calibrateWordsPerScreen();
     this.scrollTick.update(v => v + 1);
+  }
+
+  /**
+   * Words per screen, from visited sections. A section's last screen is on average half empty, so a section of N screens
+   * holds about N - 0.5 screens of text. Single-screen sections are skipped: they carry no usable density (a title page
+   * would otherwise wreck the whole estimate).
+   */
+  private calibrateWordsPerScreen(): number | null {
+    const words = this.sectionWordCounts;
+    if (!words) return null;
+
+    let fullScreens = 0;
+    let wordTotal = 0;
+    for (const [section, count] of this.sectionVirtualPageCounts) {
+      if (count < 2 || (words[section] ?? 0) <= 0) continue;
+      fullScreens += count - 0.5;
+      wordTotal += words[section];
+    }
+
+    return fullScreens > 0 ? wordTotal / fullScreens : null;
+  }
+
+  /**
+   * Estimated screen-page count of a section: measured if visited, otherwise derived from that section's own word count
+   * and the calibrated words-per-screen. Falls back to the average of visited sections if either is unavailable.
+   */
+  private estimateSectionScreens(section: number): number {
+    const measured = this.sectionVirtualPageCounts.get(section);
+    if (measured !== undefined) return measured;
+
+    const words = this.sectionWordCounts?.[section];
+    if (this.wordsPerScreen && words !== undefined) {
+      return Math.max(1, Math.ceil(words / this.wordsPerScreen));
+    }
+
+    return this.averageVirtualPageCount();
   }
 
   private averageVirtualPageCount(): number {
