@@ -133,6 +133,7 @@
     </ng-template>
 
     <ng-template #bottomActionBar>
+      <div class="book-progress-line" aria-hidden="true"><div class="book-progress-line-fill" [style.width.%]="bookProgress() * 100"></div></div>
       <div class="action-bar g-0 justify-content-between align-items-center">
 
         <div class="d-flex justify-content-start">
@@ -153,14 +154,19 @@
 
         <div class="d-flex mt-2 justify-content-center">
           @if(!isLoading()) {
+            @let bookPages = visibleBookPages();
             <span class="me-1">
-              <a class="btn-link" style="width: 100%" href="javascript:void(0);" (click)="goToPage()" [title]="t('go-to-page')">
-                {{t('page-num-label', {page: virtualizedPageNum() + 1})}}</a> / {{virtualizedMaxPages()}}
+              <a class="btn-link" style="width: 100%" href="javascript:void(0);" (click)="goToBookPage()" [title]="t('go-to-page')">
+                @if (bookPages[0] === bookPages[1]) {
+                  {{t('page-num-label', {page: bookPages[0]})}}
+                } @else {
+                  {{t('page-range-label', {from: bookPages[0], to: bookPages[1]})}}
+                }</a> {{t('of-pages-label', {total: totalBookPages()})}}
             </span>
 
             <div class="d-none d-sm-block">
               <span class="dot-separator mx-1"></span>
-              {{t('completion-label', {percent: (virtualizedPageNum() / virtualizedMaxPages()) | percent})}}
+              {{t('completion-label', {percent: bookProgress() | percent})}}
               @if (readingTimeLeftResource.value(); as timeLeft) {
                 <span class="dot-separator mx-1"></span>
                 <span class="time-left">

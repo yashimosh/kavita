@@ -140,9 +140,9 @@
         "no-libraries": "There are no libraries setup yet. Create some in",
         "server-settings-link": "Server settings",
         "not-granted": "You haven't been granted access to any libraries.",
-        "on-deck-title": "On Deck",
-        "recently-updated-title": "Recently Updated Series",
-        "recently-added-title": "Newly Added Series",
+        "on-deck-title": "Continue reading",
+        "recently-updated-title": "Recently updated",
+        "recently-added-title": "Recently added",
         "more-in-genre-title": "More In {{genre}}"
     },
 
@@ -1446,9 +1446,11 @@
         "previous": "Previous",
 
         "go-to-page": "Go to page",
-        "go-to-page-prompt": "There are {{totalPages}} pages. Which page do you want to go to? Page starts at 1.",
+        "go-to-page-prompt": "Type a page number from 1 to {{totalPages}}.",
 
         "page-num-label": "Page {{page}}",
+        "page-range-label": "Pages {{from}}-{{to}}",
+        "of-pages-label": "of {{total}}",
         "completion-label": "{{percent}} complete",
 
         "force-selected-one-column": "Layout mode switched to One Column due to insufficient space to render Two Columns",
@@ -2019,7 +2021,7 @@
         "reset-to-defaults": "Reset to Defaults",
         "update-parent": "Save to {{name}}",
         "loading": "loading",
-        "create-new": "New profile from implicit",
+        "create-new": "Save as a new profile",
         "create-new-tooltip": "Create a new manageable profile from your current implicit one",
         "reading-profile-updated": "Reading profile updated",
         "reading-profile-promoted": "Reading profile promoted",
@@ -2031,7 +2033,7 @@
         "vertical": "Vertical",
         "writing-style-label": "{{manage-reading-profiles.writing-style-label}}",
         "writing-style-tooltip": "Changes the direction of the text. Horizontal is left to right, vertical is top to bottom.",
-        "tap-to-paginate-label": "Tap Pagination",
+        "tap-to-paginate-label": "Tap sides to turn page",
         "tap-to-paginate-tooltip": "Click the edges of the screen to paginate",
         "on": "On",
         "off": "Off",
@@ -3703,7 +3705,7 @@
         "popular-person-title": "Popular {{role}}",
 
 
-        "series-count": "{{num}} Series",
+        "series-count": "{{num}} books",
         "volume-count": "{{num}} Volumes",
         "file-count": "{{num}} Files",
         "genre-count": "{{num}} Genres",
@@ -4587,7 +4589,7 @@
 
         "tap-to-paginate-label": "Tap to Paginate",
         "tap-to-paginate-tooltip": "Should the sides of the book reader screen allow tapping on it to move to prev/next page",
-        "immersive-mode-label": "Immersive Mode",
+        "immersive-mode-label": "Hide bars while reading",
         "immersive-mode-tooltip": "This will hide the menu behind a click on the reader document and turn tap to paginate on",
         "reading-direction-book-label": "Reading Direction",
         "reading-direction-book-tooltip": "Direction to click to move to next page. Right to Left means you click on left side of screen to move to next page.",
@@ -4595,7 +4597,7 @@
         "font-family-tooltip": "Font family to load up. Default will load the book's default font",
         "writing-style-label": "Writing Style",
         "writing-style-tooltip": "Changes the direction of the text. Horizontal is left to right, vertical is top to bottom.",
-        "layout-mode-book-label": "Layout Mode",
+        "layout-mode-book-label": "Layout",
         "layout-mode-book-tooltip": "How content should be laid out. Scroll is as the book packs it. 1 or 2 Column fits to the height of the device and fits 1 or 2 columns of text per page",
         "color-theme-book-label": "Color Theme",
         "color-theme-book-tooltip": "What color theme to apply to the book reader content and menu",
@@ -4605,7 +4607,7 @@
         "line-height-book-tooltip": "How much spacing between the lines of the book",
         "margin-book-label": "Margin",
         "margin-book-tooltip": "How much spacing on each side of the screen. This will override to 0 on mobile devices regardless of this setting.",
-        "disable-bookmark-icon-label": "Disable Bookmark Icon",
+        "disable-bookmark-icon-label": "Hide bookmark icons",
         "disable-bookmark-icon-tooltip": "Removes bookmark icons from images in the reader",
 
         "pdf-scroll-mode-label": "Scroll Mode",
@@ -4665,7 +4667,7 @@
         "storyline-tab": "Storyline",
         "books-tab": "Books",
         "volumes-tab": "Volumes",
-        "specials-tab": "Specials",
+        "specials-tab": "Book",
         "related-tab": "Related",
         "general-tab": "General",
         "folder-tab": "Folder",
@@ -4738,7 +4740,7 @@
         "promoted": "Promoted",
         "select-all": "Select All",
         "deselect-all": "Deselect All",
-        "series-count": "{{num}} Series",
+        "series-count": "{{num}} books",
         "item-count": "{{num}} Items",
         "chapter-count": "{{num}} Chapters",
         "issue-count": "{{num}} Issues",

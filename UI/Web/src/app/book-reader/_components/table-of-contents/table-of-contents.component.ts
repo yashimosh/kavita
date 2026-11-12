@@ -12,6 +12,7 @@ import {BookChapterItem} from '../../_models/book-chapter-item';
 import {TranslocoDirective} from "@jsverse/transloco";
 import {LoadingComponent} from "../../../shared/loading/loading.component";
 import {DOCUMENT} from "@angular/common";
+import {BookService} from "../../_services/book.service";
 
 @Component({
   selector: 'app-table-of-contents',
@@ -23,6 +24,14 @@ import {DOCUMENT} from "@angular/common";
 export class TableOfContentsComponent {
 
   private readonly document = inject(DOCUMENT)
+  private readonly bookService = inject(BookService);
+
+  /**
+   * Book page a section starts on. Null when it is not known.
+   */
+  protected pageOf(section: number): number | null {
+    return this.bookService.sectionFirstPages()[section] ?? null;
+  }
 
   chapterId = model.required<number>();
   pageNum = model.required<number>();
