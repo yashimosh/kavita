@@ -11,9 +11,10 @@
 
   @if (config._type === 'prompt') {
     <div class="modal-body" style="overflow-x: auto" [class.book-reader]="config.bookReader">
-      <form [formGroup]="formGroup">
+      <form [formGroup]="formGroup" (ngSubmit)="submitPrompt()">
         <div [innerHtml]="(config.content | confirmTranslate)! | safeHtml"></div>
-        <input type="text" class="form-control" aria-labelledby="modal-basic-title" formControlName="prompt" />
+        <input type="text" class="form-control mt-2" aria-labelledby="modal-basic-title" formControlName="prompt"
+               ngbAutofocus [attr.inputmode]="config.bookReader ? 'numeric' : null" />
       </form>
     </div>
   } @else {
