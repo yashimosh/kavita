@@ -64,6 +64,13 @@ export class ConfirmDialogComponent implements OnInit {
     this.modal.close(isConfirming);
   }
 
+  /**
+   * Enter in the text box of a prompt is the same as pressing the confirm button.
+   */
+  submitPrompt() {
+    this.modal.close(this.formGroup.get('prompt')?.value);
+  }
+
   close() {
     this.modal.close(false);
   }

@@ -60,13 +60,7 @@ HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV TZ=UTC
 
-COPY --chmod=755 <<'EOF' /start.sh
-#!/bin/bash
-if [ ! -f /kavita/config/appsettings.json ]; then
-    cp /tmp/config/appsettings.json /kavita/config/appsettings.json
-fi
-cd /kavita
-exec /usr/share/dotnet/dotnet Kavita.Server.dll
-EOF
+COPY start.yash.sh /start.sh
+RUN chmod +x /start.sh
 
 ENTRYPOINT ["/bin/bash", "/start.sh"]

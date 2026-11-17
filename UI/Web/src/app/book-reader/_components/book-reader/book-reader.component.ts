@@ -92,6 +92,36 @@ const TOP_OFFSET = -(50 + 10) * 1.5; // px the sticky header takes up // TODO: D
 
 const COLUMN_GAP = 20; // px
 /**
+ * Words on one book page. Page numbers come from the position in the text, not from how many screens the text takes,
+ * so a book has the same page numbers at every font size, on every screen and on every device.
+ */
+const WORDS_PER_PAGE = 300;
+/**
+ * Sections with fewer words than this (cover, title page, a full-page picture) count as one whole page.
+ */
+const MIN_SECTION_WORDS = 20;
+/**
+ * Widest the text gets in the scroll and 1 column layouts, in px. Wider screens get wider margins instead of longer lines.
+ */
+const MAX_TEXT_WIDTH = 760;
+/**
+ * Screens narrower than this (phones) use a part of the margin setting, so a margin that suits a desktop does not squeeze
+ * the text on a phone.
+ */
+const PHONE_WIDTH = 600;
+const PHONE_MARGIN_SCALE = 0.4;
+/**
+ * Size of the main text when the font size setting is 100%, in px.
+ */
+const BASE_TEXT_SIZE = 16;
+/**
+ * Sizes the browser gives the absolute font-size words, in px.
+ */
+const FONT_SIZE_KEYWORDS: {[key: string]: number} = {
+  'xx-small': 9, 'x-small': 10, 'small': 13, 'medium': 16, 'large': 18, 'x-large': 24, 'xx-large': 32, 'xxx-large': 48
+};
+const FONT_SCALE_STORAGE_KEY = 'kavita-book-font-scale';
+/**
  * Styles that should be applied on the top level book-content tag
  */
 const pageLevelStyles = ['margin-left', 'margin-right', 'font-size'];
@@ -213,10 +243,39 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   private scrollTick = signal<number>(0);
   /**
-   * Virtual (screen) page count per section (keyed by pageNum), populated as sections are visited.
-   * Used to approximate a true, book-wide screen-page count in column layout mode.
+   * Length of every section (a section is one file of the book), in words. Sets the book-wide page numbers.
    */
-  private sectionVirtualPageCounts = new Map<number, number>();
+  private sectionWordCounts: number[] | null = null;
+  private sectionWeights = signal<number[]>([]);
+  /**
+   * Word position where each section starts. Has one more entry than there are sections: the last one is the book length.
+   */
+  private sectionStarts = computed(() => {
+    const starts = [0];
+    for (const weight of this.sectionWeights()) starts.push(starts[starts.length - 1] + weight);
+    return starts;
+  });
+  /**
+   * Number of pages in the book. Fixed for a book.
+   */
+  protected totalBookPages = computed(() => {
+    const starts = this.sectionStarts();
+    return Math.max(1, Math.ceil(starts[starts.length - 1] / WORDS_PER_PAGE));
+  });
+  /**
+   * When set, the next section that loads opens at this point (0 = start of the section, 1 = end). Used by go to page.
+   */
+  private pendingSectionFraction: number | null = null;
+  /**
+   * Books set their own text size, each a different one. This factor evens that out, so the font size setting gives the
+   * same real text size in every book. Measured once for a book, then kept in the browser.
+   */
+  private bookFontScale = 1;
+  private bookFontScaleCalibrated = false;
+  /**
+   * Where a finger went down, to tell a swipe from a tap.
+   */
+  private touchStart: {x: number, y: number, time: number} | null = null;
   /**
    * This allows for exploration into different chapters
    */
@@ -416,8 +475,14 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected columnWidth!: Signal<string>;
   protected columnHeight!: Signal<string>;
   protected verticalBookContentWidth!: Signal<string>;
-  protected virtualizedPageNum!: Signal<number>;
-  protected virtualizedMaxPages!: Signal<number>;
+  /**
+   * First and last book page on screen, starting at 1. They differ when one screen holds more than one page.
+   */
+  protected visibleBookPages!: Signal<[number, number]>;
+  /**
+   * How far through the book the end of the screen is, 0 to 1.
+   */
+  protected bookProgress!: Signal<number>;
   protected bookContentPaddingBottom = computed(() => {
     const layoutMode = this.layoutMode();
     if (layoutMode !== BookPageLayoutMode.Default) return '0px';
@@ -622,39 +687,36 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       return '';
     });
 
-    this.virtualizedPageNum = computed(() => {
-      this.scrollTick(); // recompute on scroll/page-move, which reads live (untracked) DOM scroll position
-      const layoutMode = this.layoutMode();
-      const pageNum = this.pageNum();
+    this.visibleBookPages = computed<[number, number]>(() => {
+      this.scrollTick(); // the scroll position is not a signal, so recompute on every scroll and page turn
+      this.layoutMode();
+      const [startPosition, endPosition] = this.getVisibleBookSpan();
+      const total = this.totalBookPages();
+      const clamp = (page: number) => Math.min(total, Math.max(1, page));
 
-      if (layoutMode === BookPageLayoutMode.Default) return pageNum;
+      // In pages: the screen shows the text from `start` to `end`.
+      const start = startPosition / WORDS_PER_PAGE;
+      const end = endPosition / WORDS_PER_PAGE;
 
-      const [currentVirtualPage] = this.getVirtualPage();
-      const avg = this.averageVirtualPageCount();
-
-      let precedingSections = 0;
-      for (let i = 0; i < pageNum; i++) {
-        precedingSections += this.sectionVirtualPageCounts.get(i) ?? avg;
+      // A page is named on the screen that shows its middle, so every page belongs to exactly one screen.
+      if (end - start < 1) {
+        // Less than one page fits on the screen (phones): name the page in the middle of the screen
+        const page = clamp(Math.floor((start + end) / 2 + 1e-6) + 1);
+        return [page, page];
       }
 
-      return Math.round(precedingSections + Math.max(0, currentVirtualPage - 1));
+      const first = clamp(Math.floor(start + 0.5 + 1e-6) + 1);
+      const last = clamp(Math.max(first, Math.ceil(end - 0.5 - 1e-6)));
+      return [first, last];
     });
 
-    this.virtualizedMaxPages = computed(() => {
+    this.bookProgress = computed(() => {
       this.scrollTick();
-      const layoutMode = this.layoutMode();
-      const maxPages = this.maxPages();
-
-      if (layoutMode === BookPageLayoutMode.Default) return maxPages;
-
-      const avg = this.averageVirtualPageCount();
-
-      let total = 0;
-      for (let i = 0; i < maxPages; i++) {
-        total += this.sectionVirtualPageCounts.get(i) ?? avg;
-      }
-
-      return Math.max(1, Math.round(total));
+      this.layoutMode();
+      const starts = this.sectionStarts();
+      const bookLength = starts[starts.length - 1];
+      if (bookLength <= 0) return 0;
+      return Math.min(1, Math.max(0, this.getVisibleBookSpan()[1] / bookLength));
     });
 
     effect(() => {
@@ -736,7 +798,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
             this.closeReader();
             break;
           case KeyBindTarget.GoTo:
-            await this.goToPage();
+            await this.goToBookPage();
             break;
           case KeyBindTarget.ToggleFullScreen:
             this.applyFullscreen();
@@ -807,6 +869,18 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
         })
       )
       .subscribe();
+
+    // Swipe left or right to turn the page (column layouts; in the scroll layout a finger scrolls the text)
+    fromEvent<TouchEvent>(this.bookContainerElemRef().nativeElement, 'touchstart', {passive: true})
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(event => {
+        this.touchStart = event.touches.length === 1
+          ? {x: event.touches[0].clientX, y: event.touches[0].clientY, time: Date.now()}
+          : null;
+      });
+    fromEvent<TouchEvent>(this.bookContainerElemRef().nativeElement, 'touchend', {passive: true})
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(event => this.handleSwipe(event));
 
     const mouseUp$ = fromEvent<MouseEvent>(this.bookContainerElemRef().nativeElement, 'mouseup');
     const touchEnd$ = fromEvent<TouchEvent>(this.bookContainerElemRef().nativeElement, 'touchend');
@@ -1002,6 +1076,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       this.bookTitle.set(info.bookTitle);
+      this.sectionWordCounts = info.sectionWordCounts ?? null;
       this.kavitaTitleStrategy.setFormattedTitle(this.bookTitle() + ' Reader');
       this.cdRef.markForCheck();
 
@@ -1036,6 +1111,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.volumeId = chapter.volumeId;
     this.chapters = chapters;
     this.maxPages.set(chapter.pages);
+    this.setSectionWeights(this.sectionWordCounts, chapter.pages);
+    this.loadBookFontScale();
     this.setPageNum(progress.pageNum);
     this.cdRef.markForCheck();
 
@@ -1281,13 +1358,145 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   async promptForPage() {
     const promptConfig = {...this.confirmService.defaultPrompt};
     promptConfig.header = translate('book-reader.go-to-page');
-    promptConfig.content = translate('book-reader.go-to-page-prompt', {totalPages: this.maxPages()});
+    promptConfig.content = translate('book-reader.go-to-page-prompt', {totalPages: this.totalBookPages()});
     promptConfig.bookReader = true;
 
     const goToPageNum = await this.confirmService.prompt(undefined, promptConfig);
 
     if (goToPageNum === null || goToPageNum.trim().length === 0) { return null; }
     return goToPageNum;
+  }
+
+  /**
+   * Go to a book page, the same number the page counter shows. Asks for the number when none is given.
+   */
+  async goToBookPage(bookPage?: number) {
+    if (bookPage === null || bookPage === undefined) {
+      const answer = await this.promptForPage();
+      if (answer === null) { return; }
+      bookPage = parseInt(answer.trim(), 10);
+    }
+    if (isNaN(bookPage)) { return; }
+
+    const weights = this.sectionWeights();
+    if (weights.length === 0) { return; }
+    const starts = this.sectionStarts();
+
+    const page = Math.min(Math.max(1, bookPage), this.totalBookPages());
+    // Aim for the middle of the page: the screen that shows it is the screen that names this page
+    const position = Math.min((page - 0.5) * WORDS_PER_PAGE, starts[starts.length - 1] - 1);
+
+    let section = weights.length - 1;
+    for (let i = 0; i < weights.length; i++) {
+      if (position < starts[i + 1]) {
+        section = i;
+        break;
+      }
+    }
+    const fraction = Math.min(1, Math.max(0, (position - starts[section]) / weights[section]));
+
+    // Remember where we were, so Go back returns here
+    if (this.lastSeenScrollPartPath !== '') {
+      this.adhocPageHistory.push({page: this.pageNum(), scrollPart: this.readerService.scopeBookReaderXpath(this.lastSeenScrollPartPath)});
+    }
+
+    if (section === this.pageNum()) {
+      this.scrollToSectionFraction(fraction);
+      afterFrame(() => this.handleScrollEvent());
+      return;
+    }
+
+    this.pagingDirection = PAGING_DIRECTION.FORWARD;
+    this.pendingSectionFraction = fraction;
+    this.pageNum.set(section);
+    this.loadPage();
+  }
+
+  /**
+   * Scrolls inside the loaded section. 0 is the start of the section, 1 is the end.
+   */
+  private scrollToSectionFraction(fraction: number) {
+    const isVertical = this.writingStyle() === WritingStyle.Vertical;
+
+    if (this.layoutMode() === BookPageLayoutMode.Default) {
+      const readerElem = this.reader().nativeElement;
+      if (isVertical) {
+        this.scrollService.scrollToX(Math.max(0, fraction * readerElem.scrollWidth - readerElem.clientWidth / 2), readerElem);
+      } else {
+        this.scrollService.scrollTo(Math.max(0, fraction * readerElem.scrollHeight - readerElem.clientHeight / 2), readerElem);
+      }
+      return;
+    }
+
+    const [, totalVirtualPages, pageSize] = this.getVirtualPage();
+    const screen = Math.min(totalVirtualPages - 1, Math.floor(fraction * totalVirtualPages + 1e-6));
+    const bookContentElem = this.bookContentElemRef().nativeElement;
+    if (isVertical) {
+      this.scrollService.scrollTo(screen * pageSize, bookContentElem, 'auto');
+    } else {
+      this.scrollService.scrollToX(screen * pageSize, bookContentElem);
+    }
+  }
+
+  /**
+   * Word positions in the whole book of the start and the end of what is on screen.
+   */
+  private getVisibleBookSpan(): [number, number] {
+    const weights = this.sectionWeights();
+    if (weights.length === 0) return [0, 0];
+
+    const section = Math.min(Math.max(0, this.pageNum()), weights.length - 1);
+    const sectionStart = this.sectionStarts()[section];
+    const [from, to] = this.getVisibleSectionSpan();
+    return [sectionStart + from * weights[section], sectionStart + to * weights[section]];
+  }
+
+  /**
+   * Which part of the loaded section is on screen, as two numbers from 0 (start of the section) to 1 (end).
+   */
+  private getVisibleSectionSpan(): [number, number] {
+    if (!this.bookContentElemRef() || !this.readingSectionElemRef() || this.isLoading()) return [0, 0];
+
+    if (this.layoutMode() === BookPageLayoutMode.Default) {
+      const readerElem = this.reader().nativeElement;
+      const isVertical = this.writingStyle() === WritingStyle.Vertical;
+      const total = isVertical ? readerElem.scrollWidth : readerElem.scrollHeight;
+      const offset = isVertical ? Math.abs(readerElem.scrollLeft) : readerElem.scrollTop;
+      const size = isVertical ? readerElem.clientWidth : readerElem.clientHeight;
+      if (total <= 0) return [0, 1];
+      return [Math.min(1, offset / total), Math.min(1, (offset + size) / total)];
+    }
+
+    const [currentVirtualPage, totalVirtualPages] = this.getVirtualPage();
+    return [(currentVirtualPage - 1) / totalVirtualPages, currentVirtualPage / totalVirtualPages];
+  }
+
+  /**
+   * Works out the length of every section from the word counts the server sends. Without them every section is one page.
+   */
+  private setSectionWeights(wordCounts: number[] | null | undefined, sections: number) {
+    const usable = !!wordCounts && wordCounts.length === sections;
+    const weights: number[] = [];
+    for (let i = 0; i < sections; i++) {
+      const words = usable ? wordCounts![i] : 0;
+      weights.push(words >= MIN_SECTION_WORDS ? words : WORDS_PER_PAGE);
+    }
+    this.sectionWeights.set(weights);
+
+    this.publishSectionFirstPages(weights);
+  }
+
+  /**
+   * Tells the table of contents which book page every section starts on.
+   */
+  private publishSectionFirstPages(weights: number[]) {
+    const firstPages: number[] = [];
+    let position = 0;
+    for (const weight of weights) {
+      firstPages.push(Math.floor(position / WORDS_PER_PAGE) + 1);
+      position += weight;
+    }
+    this.bookService.sectionFirstPages.set(firstPages);
   }
 
   async goToPage(pageNum?: number) {
@@ -1320,7 +1529,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isSingleImagePage = this.checkSingleImagePage(content); // This needs be performed before we set this.page to avoid image jumping
       this.updateSingleImagePageStyles();
 
-      this.page.set(this.domSanitizer.bypassSecurityTrustHtml(content));
+      this.page.set(this.domSanitizer.bypassSecurityTrustHtml(this.normalizeFontSizes(content)));
       this.bookService.prefetchPages(this.chapterId, this.pageNum(), this.maxPages());
 
       this.scrollService.unlock();
@@ -1518,6 +1727,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading.set(false);
     this.cdRef.markForCheck();
 
+    this.correctSectionWeight();
+
     // Virtual Paging stuff
     this.updateWidthAndHeightCalcs();
     this.applyLayoutMode(this.layoutMode());
@@ -1538,7 +1749,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading.set(false);
     this.cdRef.markForCheck();
 
-    this.recordVirtualPageCount();
+    this.scrollTick.update(v => v + 1);
 
     this.annotationService.getAllAnnotations(this.chapterId).subscribe(_ => {
       this.setupAnnotationElements();
@@ -1560,6 +1771,13 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private scrollWithinPage(part?: string | undefined, scrollTop?: number) {
+    if (this.pendingSectionFraction !== null) {
+      const fraction = this.pendingSectionFraction;
+      this.pendingSectionFraction = null;
+      this.scroll(() => this.scrollToSectionFraction(fraction));
+      return;
+    }
+
     if (part !== undefined && part !== '') {
       this.scroll(() => this.scrollTo(this.readerService.scopeBookReaderXpath(part)));
       return;
@@ -1662,6 +1880,27 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    * Given a direction, calls the next or prev page method
    * @param direction Direction to move
    */
+  private handleSwipe(event: TouchEvent) {
+    const start = this.touchStart;
+    this.touchStart = null;
+    if (!start || event.changedTouches.length !== 1) return;
+    if (this.layoutMode() === BookPageLayoutMode.Default || this.writingStyle() === WritingStyle.Vertical) return;
+    if (this.drawingActive() || this.isLoading() || this.isLineOverlayOpen()) return;
+
+    const selection = window.getSelection();
+    if (selection !== null && selection.toString().trim() !== '') return; // selecting text, not swiping
+
+    const deltaX = event.changedTouches[0].clientX - start.x;
+    const deltaY = event.changedTouches[0].clientY - start.y;
+    if (Date.now() - start.time > 800) return;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
+
+    // The page follows the finger: in a left to right book, swiping left brings the next page
+    const swipedLeft = deltaX < 0;
+    const isLeftToRight = this.readingDirection() === ReadingDirection.LeftToRight;
+    this.movePage(swipedLeft === isLeftToRight ? PAGING_DIRECTION.FORWARD : PAGING_DIRECTION.BACKWARDS);
+  }
+
   movePage(direction: PAGING_DIRECTION) {
     switch (direction) {
       case PAGING_DIRECTION.BACKWARDS:
@@ -1817,31 +2056,19 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     return windowWidth - margin;
   });
 
+  /**
+   * Turns the margin setting into px for this screen. Phones get a smaller margin, and in the scroll and 1 column layouts
+   * a wide screen gets a wider margin so lines stay a readable length.
+   */
   convertVwToPx(vwValue: number) {
     const viewportWidth = Math.max(this.readingSectionElemRef()?.nativeElement?.clientWidth ?? 0, window.innerWidth || 0);
-    return (vwValue * viewportWidth) / 100;
-  }
+    if (viewportWidth < PHONE_WIDTH) {
+      return (vwValue * PHONE_MARGIN_SCALE * viewportWidth) / 100;
+    }
 
-  /**
-   * Caches the current section's virtual (screen) page count, so the book-wide page
-   * counter can approximate true screen-page progress instead of just counting sections.
-   */
-  private recordVirtualPageCount() {
-    if (this.layoutMode() === BookPageLayoutMode.Default) return;
-
-    const [, totalVirtualPages] = this.getVirtualPage();
-    if (totalVirtualPages <= 0) return;
-
-    this.sectionVirtualPageCounts.set(this.pageNum(), totalVirtualPages);
-    this.scrollTick.update(v => v + 1);
-  }
-
-  private averageVirtualPageCount(): number {
-    if (this.sectionVirtualPageCounts.size === 0) return 1;
-
-    let sum = 0;
-    for (const count of this.sectionVirtualPageCounts.values()) sum += count;
-    return sum / this.sectionVirtualPageCounts.size;
+    const margin = (vwValue * viewportWidth) / 100;
+    if (this.layoutMode() === BookPageLayoutMode.Column2 || this.writingStyle() === WritingStyle.Vertical) return margin;
+    return Math.max(margin, (viewportWidth - MAX_TEXT_WIDTH) / 2);
   }
 
   /**
@@ -2059,6 +2286,149 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    * Applies styles onto the html of the book page.
    * Note: This has a critical role when margin changes and 2 column layout is in play
    */
+  /**
+   * Sets the text size. The font size setting is the size of the main text (100% is 16px), in every book.
+   */
+  private applyFontSize(pageStyles: PageStyle) {
+    const bookContentElem = this.bookContentElemRef().nativeElement;
+    const percent = parseInt(pageStyles['font-size'] ?? '100', 10) || 100;
+
+    const apply = () => {
+      const factor = (percent / 100) * this.bookFontScale;
+      this.renderer.setStyle(bookContentElem, 'font-size', `${Math.round(factor * 1000) / 10}%`, RendererStyleFlags2.Important);
+      // Sizes the book wrote in px, pt or words like "small" are multiplied by this (see normalizeFontSizes)
+      bookContentElem.style.setProperty('--kv-font-scale', `${Math.round(factor * 1000) / 1000}`);
+    };
+    apply();
+
+    if (this.bookFontScaleCalibrated || !this.isChapterSizedSection()) return;
+
+    const mainTextSize = this.measureMainTextSize();
+    if (mainTextSize === null) return; // not enough text in this section to tell; try again on the next one
+
+    const wanted = BASE_TEXT_SIZE * percent / 100;
+    this.bookFontScale = Math.min(2.5, Math.max(0.5, this.bookFontScale * wanted / mainTextSize));
+    this.bookFontScaleCalibrated = true;
+    this.storeBookFontScale();
+    apply();
+  }
+
+  /**
+   * True when the loaded section is at least as long as the middle section of the book. Front matter (praise, copyright,
+   * dedication) is short and often set smaller than the chapters, so it must not decide the text size of the book.
+   */
+  private isChapterSizedSection(): boolean {
+    const weights = this.sectionWeights();
+    if (weights.length <= 2) return true;
+
+    const sorted = [...weights].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    return (weights[this.pageNum()] ?? 0) >= median;
+  }
+
+  /**
+   * The server sometimes counts far too few words for a section (seen with books converted from other formats). When the
+   * loaded text is clearly longer than the count, trust the text, so page numbers stay sensible for those books too.
+   */
+  private correctSectionWeight() {
+    const bookContentElem = this.bookContentElemRef()?.nativeElement;
+    const section = this.pageNum();
+    const weights = this.sectionWeights();
+    if (!bookContentElem || section < 0 || section >= weights.length) return;
+
+    let chars = (bookContentElem.textContent ?? '').length;
+    bookContentElem.querySelectorAll('style, script').forEach((elem: Element) => chars -= (elem.textContent ?? '').length);
+    const words = Math.round(chars / 6); // about 5 letters and a space per word
+
+    const counted = this.sectionWordCounts?.[section] ?? 0;
+    if (words < MIN_SECTION_WORDS || words <= counted * 2 + 100 || weights[section] === words) return;
+
+    const corrected = [...weights];
+    corrected[section] = words;
+    this.sectionWeights.set(corrected);
+    this.publishSectionFirstPages(corrected);
+  }
+
+  /**
+   * The font size, in px, that most of the text in the loaded section uses. Null when the section has too little text.
+   */
+  private measureMainTextSize(): number | null {
+    const bookContentElem = this.bookContentElemRef().nativeElement;
+    const walker = this.document.createTreeWalker(bookContentElem, NodeFilter.SHOW_TEXT);
+    const charsBySize = new Map<number, number>();
+    let chars = 0;
+    let checked = 0;
+
+    let node = walker.nextNode();
+    while (node && checked < 400) {
+      const text = node.nodeValue?.trim() ?? '';
+      const parent = node.parentElement;
+      node = walker.nextNode();
+      if (text.length < 40 || !parent || parent.closest('style, script')) continue;
+
+      checked++;
+      const size = Math.round(parseFloat(window.getComputedStyle(parent).fontSize) * 10) / 10;
+      if (!size) continue;
+      charsBySize.set(size, (charsBySize.get(size) ?? 0) + text.length);
+      chars += text.length;
+    }
+
+    if (chars < 1500) return null;
+
+    let mainSize = 0;
+    let mainChars = 0;
+    for (const [size, count] of charsBySize) {
+      if (count > mainChars) {
+        mainSize = size;
+        mainChars = count;
+      }
+    }
+    return mainSize;
+  }
+
+  private loadBookFontScale() {
+    this.bookFontScale = 1;
+    this.bookFontScaleCalibrated = false;
+    try {
+      const stored = JSON.parse(localStorage.getItem(FONT_SCALE_STORAGE_KEY) ?? '{}');
+      const scale = stored[this.chapterId];
+      if (typeof scale === 'number' && scale >= 0.5 && scale <= 2.5) {
+        this.bookFontScale = scale;
+        this.bookFontScaleCalibrated = true;
+      }
+    } catch (e) { /* nothing stored */ }
+  }
+
+  private storeBookFontScale() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(FONT_SCALE_STORAGE_KEY) ?? '{}');
+      stored[this.chapterId] = Math.round(this.bookFontScale * 1000) / 1000;
+      localStorage.setItem(FONT_SCALE_STORAGE_KEY, JSON.stringify(stored));
+    } catch (e) { /* storage full or blocked: the scale is measured again next time */ }
+  }
+
+  /**
+   * Books often fix their text size in px, pt or words like "small". Those ignore the font size setting. This rewrites
+   * them so they follow it.
+   */
+  private normalizeFontSizes(html: string): string {
+    return html.replace(/font-size\s*:\s*(?:(xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large)|(\d*\.?\d+)(px|pt|rem))(?![\w.-])/gi,
+      (_match, keyword: string | undefined, amount: string | undefined, unit: string | undefined) => {
+        let px: number;
+        if (keyword !== undefined) {
+          px = FONT_SIZE_KEYWORDS[keyword.toLowerCase()];
+        } else {
+          const value = parseFloat(amount!);
+          switch (unit!.toLowerCase()) {
+            case 'pt': px = value * 4 / 3; break;
+            case 'rem': px = value * 16; break;
+            default: px = value;
+          }
+        }
+        return `font-size: calc(${Math.round(px * 100) / 100}px * var(--kv-font-scale, 1))`;
+      });
+  }
+
   applyPageStyles(pageStyles: PageStyle) {
     const bookContentElemRef = this.bookContentElemRef();
     if (bookContentElemRef === undefined || !bookContentElemRef.nativeElement) return;
@@ -2071,8 +2441,11 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Line Height must be placed on each element in the page
 
+    this.applyFontSize(pageStyles);
+
     // Apply page level overrides
     Object.entries(pageStyles).forEach(item => {
+      if (item[0] === 'font-size') return; // handled by applyFontSize
       if (item[1] == '100%' || item[1] == '0px' || item[1] == 'inherit') {
         // Remove the style or skip
         this.renderer.removeStyle(this.bookContentElemRef().nativeElement, item[0]);

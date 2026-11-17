@@ -451,3 +451,15 @@ $pagination-opacity: 0;
 .page-progress-slider {
   margin: 0;
 }
+
+// Thin line on top of the bottom bar: how far through the book you are
+.book-progress-line {
+  height: 2px;
+  background-color: rgba(128, 128, 128, 0.25);
+
+  .book-progress-line-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    transition: width 200ms ease;
+  }
+}

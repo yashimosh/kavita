@@ -1,5 +1,5 @@
 import {HttpClient} from '@angular/common/http';
-import {inject, Injectable} from '@angular/core';
+import {inject, Injectable, signal} from '@angular/core';
 import {Observable, of, tap} from 'rxjs';
 import {TextResonse} from 'src/app/_types/text-response';
 import {environment} from 'src/environments/environment';
@@ -15,6 +15,11 @@ export class BookService {
 
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
+
+  /**
+   * First book page of every section of the open book (index = section). Set by the reader, shown in the table of contents.
+   */
+  readonly sectionFirstPages = signal<number[]>([]);
 
   // In-memory page cache: key = `{chapterId}:{page}`
   private readonly pageCache = new Map<string, string>();

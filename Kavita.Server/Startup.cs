@@ -332,7 +332,14 @@ public class Startup
             HttpsCompression = HttpsCompressionMode.Compress,
             OnPrepareResponse = ctx =>
             {
-                ctx.Context.Response.Headers[HeaderNames.CacheControl] = "public,max-age=" + TimeSpan.FromHours(24);
+                // Angular puts a content hash in the name of its bundles (chunk-ABCD1234.js), so a name never changes
+                // content and the browser can keep those files without asking again. Everything else: one day.
+                var fileName = ctx.File.Name;
+                var isHashedBundle = System.Text.RegularExpressions.Regex.IsMatch(fileName,
+                    @"[-.][A-Z0-9]{8}\.(js|css|woff2?|ttf)$");
+                ctx.Context.Response.Headers[HeaderNames.CacheControl] = isHashedBundle
+                    ? "public,max-age=31536000,immutable"
+                    : "public,max-age=86400";
                 ctx.Context.Response.Headers[Headers.RobotsTag] = "noindex,nofollow";
             }
         });

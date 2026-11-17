@@ -22105,6 +22105,15 @@
           "chapterTitle": {
             "type": "string",
             "nullable": true
+          },
+          "sectionWordCounts": {
+            "type": "array",
+            "description": "Epub only. Estimated word count of each reading-order section, indexed by page (section) number. Lets the reader\nweight sections by length when estimating a book-wide page count. Null if it couldn't be calculated.",
+            "nullable": true,
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         },
         "additionalProperties": false
